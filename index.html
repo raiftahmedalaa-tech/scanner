@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>مسح المنتج</title>
+
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --background: #f3f6fb;
+      --surface: #ffffff;
+      --text: #172033;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --success: #15803d;
+      --danger: #b91c1c;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--background);
+      color: var(--text);
+      font-family: Tahoma, Arial, sans-serif;
+    }
+
+    .page {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 24px 14px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 24px;
+      margin: 0 0 18px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      margin-bottom: 14px;
+      box-shadow: 0 12px 35px rgba(15, 23, 42, .06);
+    }
+
+    .message {
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      font-size: 14px;
+      line-height: 1.8;
+      overflow-wrap: anywhere;
+    }
+
+    .message.info    { background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; }
+    .message.success { background: #f0fdf4; border: 1px solid #bbf7d0; color: var(--success); }
+    .message.error   { background: #fef2f2; border: 1px solid #fecaca; color: var(--danger); }
+
+    #reader {
+      width: 100%;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #0f172a;
+      min-height: 260px;
+    }
+
+    #reader video { width: 100% !important; }
+
+    button {
+      width: 100%;
+      min-height: 48px;
+      border: 0;
+      border-radius: 12px;
+      background: var(--primary);
+      color: #fff;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 12px 16px;
+    }
+
+    button:hover { background: var(--primary-dark); }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+
+    #startBtn { margin-top: 12px; }
+
+    h2 { font-size: 16px; margin: 0 0 6px; }
+
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.8;
+      margin: 0 0 12px;
+    }
+
+    input {
+      width: 100%;
+      min-height: 48px;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-family: Arial, sans-serif;
+      font-size: 16px;
+      direction: ltr;
+      text-align: center;
+      margin-bottom: 10px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+
+<body>
+  <main class="page">
+    <h1>مسح QR المنتج</h1>
+
+    <section class="card">
+      <div id="status" class="message info" role="status" aria-live="polite">
+        جارٍ تشغيل الكاميرا...
+      </div>
+
+      <div id="reader"></div>
+
+      <button id="startBtn" type="button" class="hidden">تشغيل الكاميرا</button>
+    </section>
+
+    <section class="card">
+      <h2>الكاميرا لا تعمل؟</h2>
+      <p class="hint">اكتب رقم المنتج يدويًا (مثال: PROD-000123 أو 123 فقط).</p>
+
+      <form id="manualForm">
+        <input id="manualInput" type="text" placeholder="PROD-000123" autocomplete="off" maxlength="50">
+        <button type="submit">عرض المنتج</button>
+      </form>
+    </section>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  <script>
+    'use strict';
+
+    // لازم يكون نفس رابط الـ Web App (اللي بينتهي بـ /exec)
+    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzfbcrBUqJULuQkvgCb_cwc8-VvZl8TyK_ZoFe0MNyN3ZlmOO4QpJEk0_Ly84I7UXUXSQ/exec';
+    const ID_PREFIX = 'PROD-';
+    const ID_DIGITS = 6;
+
+    const statusEl = document.getElementById('status');
+    const startBtn = document.getElementById('startBtn');
+
+    let scanner = null;
+    let handled = false;
+
+    function setStatus(message, type) {
+      statusEl.textContent = message;
+      statusEl.className = 'message ' + (type || 'info');
+    }
+
+    /**
+     * يقبل فقط QR اللي بيبدأ برابط الـ Web App بتاعنا،
+     * ويرجّع الـ id منه. أي QR تاني يتجاهل.
+     */
+    function extractId(text) {
+      const value = String(text || '').trim();
+
+      if (value.indexOf(WEB_APP_URL + '?') !== 0) return null;
+
+      try {
+        const id = new URL(value).searchParams.get('id');
+        return id && id.trim() ? id.trim() : null;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function goToProduct(id) {
+      // نبني الرابط من جديد بدل ما نستخدم النص المقروء كما هو.
+      window.location.href = WEB_APP_URL + '?id=' + encodeURIComponent(id);
+    }
+
+    function onScanSuccess(text) {
+      if (handled) return;
+
+      const id = extractId(text);
+
+      if (!id) {
+        setStatus('هذا الـ QR ليس لمنتج من النظام. جرّب كودًا آخر.', 'error');
+        return;
+      }
+
+      handled = true;
+      setStatus('تمت قراءة المنتج ' + id + '، جارٍ الفتح...', 'success');
+
+      const proceed = function() { goToProduct(id); };
+
+      if (scanner) {
+        scanner.stop().then(proceed, proceed);
+      } else {
+        proceed();
+      }
+    }
+
+    async function startCamera() {
+      if (typeof Html5Qrcode === 'undefined') {
+        setStatus('تعذر تحميل مكتبة المسح. تأكد من الإنترنت أو استخدم الإدخال اليدوي.', 'error');
+        return;
+      }
+
+      startBtn.disabled = true;
+      setStatus('جارٍ تشغيل الكاميرا... اضغط "سماح" لو ظهر طلب الإذن.', 'info');
+
+      try {
+        if (!scanner) scanner = new Html5Qrcode('reader');
+
+        await scanner.start(
+          { facingMode: 'environment' },
+          {
+            fps: 10,
+            qrbox: function(width, height) {
+              const size = Math.floor(Math.min(width, height) * 0.7);
+              return { width: size, height: size };
+            }
+          },
+          onScanSuccess,
+          function() { /* تجاهل أخطاء عدم وجود QR في الكادر */ }
+        );
+
+        startBtn.classList.add('hidden');
+        setStatus('وجّه الكاميرا نحو QR Code الخاص بالمنتج.', 'info');
+
+      } catch (error) {
+        console.error('Camera start failed:', error);
+
+        const denied = error && (
+          error.name === 'NotAllowedError' ||
+          /permission|denied/i.test(String(error))
+        );
+
+        setStatus(
+          denied
+            ? 'تم رفض إذن الكاميرا. فعّل الإذن للموقع من إعدادات المتصفح ثم اضغط "تشغيل الكاميرا"، أو اكتب رقم المنتج يدويًا.'
+            : 'تعذر تشغيل الكاميرا على هذا الجهاز. اكتب رقم المنتج يدويًا.',
+          'error'
+        );
+
+        startBtn.textContent = 'إعادة تشغيل الكاميرا';
+        startBtn.disabled = false;
+        startBtn.classList.remove('hidden');
+      }
+    }
+
+    startBtn.addEventListener('click', startCamera);
+
+    document.getElementById('manualForm').addEventListener('submit', function(event) {
+      event.preventDefault();
+
+      let value = document.getElementById('manualInput').value.trim().toUpperCase();
+
+      if (!value) {
+        setStatus('اكتب رقم المنتج أولًا.', 'error');
+        return;
+      }
+
+      // لو كتب أرقام فقط نكمّلها للشكل الكامل PROD-000123
+      if (/^\d+$/.test(value)) {
+        value = ID_PREFIX + value.padStart(ID_DIGITS, '0');
+      }
+
+      goToProduct(value);
+    });
+
+    document.addEventListener('DOMContentLoaded', startCamera);
+  </script>
+</body>
+</html>

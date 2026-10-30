@@ -152,8 +152,8 @@
   <script>
     'use strict';
 
-    // لازم يكون نفس رابط الـ Web App (اللي بينتهي بـ /exec)
-    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzfbcrBUqJULuQkvgCb_cwc8-VvZl8TyK_ZoFe0MNyN3ZlmOO4QpJEk0_Ly84I7UXUXSQ/exec';
+    // رابط صفحة المنتج على GitHub (لازم يكون نفس مكان product.html).
+    const PRODUCT_PAGE_URL = 'https://raiftahmedalaa-tech.github.io/scanner/product.html';
     const ID_PREFIX = 'PROD-';
     const ID_DIGITS = 6;
 
@@ -169,13 +169,13 @@
     }
 
     /**
-     * يقبل فقط QR اللي بيبدأ برابط الـ Web App بتاعنا،
+     * يقبل فقط QR اللي بيبدأ برابط صفحة المنتج بتاعتنا،
      * ويرجّع الـ id منه. أي QR تاني يتجاهل.
      */
     function extractId(text) {
       const value = String(text || '').trim();
 
-      if (value.indexOf(WEB_APP_URL + '?') !== 0) return null;
+      if (value.indexOf(PRODUCT_PAGE_URL + '?') !== 0) return null;
 
       try {
         const id = new URL(value).searchParams.get('id');
@@ -187,7 +187,7 @@
 
     function goToProduct(id) {
       // نبني الرابط من جديد بدل ما نستخدم النص المقروء كما هو.
-      window.location.href = WEB_APP_URL + '?id=' + encodeURIComponent(id);
+      window.location.href = PRODUCT_PAGE_URL + '?id=' + encodeURIComponent(id);
     }
 
     function onScanSuccess(text) {

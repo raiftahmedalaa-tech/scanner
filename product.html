@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>بيانات المنتج</title>
+
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --background: #f3f6fb;
+      --surface: #ffffff;
+      --text: #172033;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --success: #15803d;
+      --danger: #b91c1c;
+      --radius: 18px;
+      --shadow: 0 12px 35px rgba(15, 23, 42, .08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--background);
+      color: var(--text);
+      font-family: Tahoma, Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .page {
+      width: 100%;
+      max-width: 620px;
+      margin: auto;
+      padding: 28px 16px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .brand {
+      text-align: center;
+      margin-bottom: 22px;
+    }
+
+    .brand-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 64px;
+      height: 64px;
+      border-radius: 20px;
+      background: #dbeafe;
+      color: var(--primary);
+      font-size: 30px;
+      margin-bottom: 12px;
+    }
+
+    .brand h1 {
+      margin: 0 0 8px;
+      font-size: 26px;
+      font-weight: 800;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid rgba(226, 232, 240, .9);
+      border-radius: var(--radius);
+      padding: 26px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+
+    .card h2 {
+      font-size: 21px;
+      margin: 0 0 10px;
+    }
+
+    .description {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.9;
+      margin: 0 0 22px;
+    }
+
+    .field {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 9px;
+    }
+
+    input {
+      width: 100%;
+      min-height: 48px;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      background: #fff;
+      padding: 12px 14px;
+      font-family: inherit;
+      font-size: 16px;
+      color: var(--text);
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+
+    input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+    }
+
+    input:disabled {
+      background: #f8fafc;
+      color: #64748b;
+    }
+
+    .otp-input {
+      direction: ltr;
+      text-align: center;
+      letter-spacing: 8px;
+      font-size: 23px;
+      font-weight: 800;
+    }
+
+    button {
+      width: 100%;
+      min-height: 48px;
+      border: 0;
+      border-radius: 12px;
+      background: var(--primary);
+      color: white;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 12px 16px;
+      transition: background .2s, transform .1s;
+    }
+
+    button:hover {
+      background: var(--primary-dark);
+    }
+
+    button:active {
+      transform: scale(.99);
+    }
+
+    button:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+
+    .logout-button {
+      background: #fff;
+      color: var(--danger);
+      border: 1px solid #fecaca;
+    }
+
+    .logout-button:hover {
+      background: #fef2f2;
+    }
+
+    .text-button {
+      display: block;
+      width: auto;
+      min-height: auto;
+      background: transparent;
+      color: var(--primary);
+      padding: 12px 4px 0;
+      margin: 0 auto;
+      font-size: 14px;
+    }
+
+    .text-button:hover {
+      background: transparent;
+      text-decoration: underline;
+    }
+
+    .message {
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin: 0 0 16px;
+      font-size: 13px;
+      line-height: 1.8;
+      overflow-wrap: anywhere;
+    }
+
+    .message.error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: var(--danger);
+    }
+
+    .message.success {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: var(--success);
+    }
+
+    .message.info {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1d4ed8;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .loading-area {
+      text-align: center;
+      padding: 28px 12px;
+    }
+
+    .spinner {
+      width: 42px;
+      height: 42px;
+      border: 4px solid #dbeafe;
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .loading-area p {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.8;
+      margin: 0;
+    }
+
+    .product-heading {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+
+    .product-icon {
+      width: 54px;
+      height: 54px;
+      flex-shrink: 0;
+      border-radius: 16px;
+      background: #dbeafe;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 25px;
+    }
+
+    .product-heading h2 {
+      margin: 0 0 6px;
+      font-size: 21px;
+      overflow-wrap: anywhere;
+    }
+
+    .product-heading p {
+      color: var(--muted);
+      margin: 0;
+      font-size: 13px;
+    }
+
+    .product-field {
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    #productFields .product-field:last-child {
+      border-bottom: 0;
+    }
+
+    .product-label {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .product-value {
+      font-size: 16px;
+      line-height: 1.9;
+      font-weight: 600;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+
+    .product-value.not-entered {
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .product-price {
+      color: var(--success);
+      font-size: 23px;
+      font-weight: 800;
+    }
+
+    .product-id {
+      direction: ltr;
+      text-align: right;
+      font-family: Arial, sans-serif;
+    }
+
+    @media (max-width: 480px) {
+      .page {
+        padding: 20px 12px;
+      }
+
+      .card {
+        padding: 21px 17px;
+      }
+
+      .brand h1 {
+        font-size: 23px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="page">
+    <header class="brand">
+      <div class="brand-icon" aria-hidden="true">▦</div>
+      <h1>بيانات المنتج</h1>
+    </header>
+
+    <section id="initialLoading" class="card loading-area">
+      <div class="spinner" aria-hidden="true"></div>
+      <p>جارٍ التحميل...</p>
+    </section>
+
+    <section id="loginCard" class="card hidden">
+      <div id="emailStep">
+        <h2>تسجيل الدخول</h2>
+        <p class="description">
+          أدخل البريد الإلكتروني المصرح به. سنرسل لك كود تحقق لإكمال تسجيل الدخول.
+        </p>
+
+        <div id="loginMessage" class="message hidden" role="status"></div>
+
+        <form id="emailForm">
+          <div class="field">
+            <label for="emailInput">البريد الإلكتروني</label>
+            <input
+              id="emailInput"
+              type="email"
+              autocomplete="email"
+              placeholder="name@example.com"
+              required
+            >
+          </div>
+
+          <button id="requestCodeButton" type="submit">
+            إرسال كود التحقق
+          </button>
+        </form>
+      </div>
+
+      <div id="otpStep" class="hidden">
+        <h2>تأكيد البريد الإلكتروني</h2>
+        <p class="description">
+          أدخل كود التحقق المكوّن من 6 أرقام الذي تم إرساله إلى بريدك الإلكتروني.
+        </p>
+
+        <div id="otpMessage" class="message hidden" role="status"></div>
+
+        <form id="otpForm">
+          <div class="field">
+            <label for="otpInput">كود التحقق</label>
+            <input
+              id="otpInput"
+              class="otp-input"
+              type="text"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              maxlength="6"
+              pattern="[0-9]{6}"
+              placeholder="••••••"
+              required
+            >
+          </div>
+
+          <button id="verifyCodeButton" type="submit">
+            تأكيد وتسجيل الدخول
+          </button>
+        </form>
+
+        <button id="backToEmailButton" class="text-button" type="button">
+          تغيير البريد الإلكتروني
+        </button>
+      </div>
+    </section>
+
+    <section id="productLoading" class="card loading-area hidden">
+      <div class="spinner" aria-hidden="true"></div>
+      <p>جارٍ تحميل بيانات المنتج...</p>
+    </section>
+
+    <section id="productCard" class="card hidden">
+      <div class="product-heading">
+        <div class="product-icon" aria-hidden="true">▦</div>
+        <div>
+          <p>اسم المنتج</p>
+          <h2 id="productName">—</h2>
+        </div>
+      </div>
+
+      <div id="productMessage" class="message hidden" role="status"></div>
+
+      <div class="product-field">
+        <div class="product-label">رقم المنتج</div>
+        <div id="productId" class="product-value product-id">—</div>
+      </div>
+
+      <div class="product-field">
+        <div class="product-label">كود المنتج</div>
+        <div id="productCode" class="product-value">—</div>
+      </div>
+
+      <!-- الحقول (الأسعار والمخزون) تُبنى ديناميكيًا حسب صلاحية المستخدم -->
+      <div id="productFields"></div>
+
+      <button
+        id="scanAnotherButton"
+        type="button"
+        style="margin-top:12px"
+      >
+        مسح منتج آخر
+      </button>
+
+      <button
+        id="logoutButton"
+        class="logout-button"
+        type="button"
+        style="margin-top:12px"
+      >
+        تسجيل الخروج
+      </button>
+    </section>
+
+    <section id="scanCard" class="card hidden">
+      <h2>جاهز للمسح</h2>
+      <p class="description">
+        اضغط الزر لفتح الكاميرا ومسح QR Code الخاص بالمنتج.
+      </p>
+
+      <button id="startScanButton" type="button">
+        مسح منتج
+      </button>
+
+      <button
+        id="scanLogoutButton"
+        class="logout-button"
+        type="button"
+        style="margin-top:12px"
+      >
+        تسجيل الخروج
+      </button>
+    </section>
+  </main>
+
+  <script>
+    'use strict';
+
+    // رابط Apps Script (الـ API فقط) وروابط الصفحات على GitHub.
+    const API_URL = 'https://script.google.com/macros/s/AKfycbzfbcrBUqJULuQkvgCb_cwc8-VvZl8TyK_ZoFe0MNyN3ZlmOO4QpJEk0_Ly84I7UXUXSQ/exec';
+    const HOME_URL = 'https://raiftahmedalaa-tech.github.io/scanner/product.html';
+    const SCANNER_URL = 'https://raiftahmedalaa-tech.github.io/scanner/';
+    const REQUEST_TIMEOUT_MS = 30000;
+
+    // المتصفح يحتفظ بالتوكن فقط، ولا نخزن البريد الإلكتروني.
+    const SESSION_KEY = 'raif_product_session_v1';
+    const PRODUCT_ID = (new URLSearchParams(window.location.search).get('id') || '').trim();
+    const NOT_ENTERED_TEXT = 'لم يتم إدخاله';
+    const NOT_SPECIFIED_TEXT = 'غير محدد';
+    let currentEmail = '';
+    let currentToken = '';
+    let busy = false;
+
+    /**
+     * بديل google.script.run: يرسل الطلب للـ API ويستدعي
+     * onSuccess(result) أو onFailure(error) بنفس الشكل القديم.
+     * نستخدم text/plain عشان المتصفح ما يعملش طلب preflight.
+     */
+    function callServer(action, args, onSuccess, onFailure) {
+      const controller = new AbortController();
+      const timer = window.setTimeout(function() {
+        controller.abort();
+      }, REQUEST_TIMEOUT_MS);
+
+      fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: action, args: args }),
+        signal: controller.signal
+      })
+        .then(function(response) {
+          if (!response.ok) {
+            throw new Error('HTTP ' + response.status);
+          }
+          return response.json();
+        })
+        .then(
+          function(data) {
+            window.clearTimeout(timer);
+            onSuccess(data);
+          },
+          function(error) {
+            window.clearTimeout(timer);
+            onFailure(error);
+          }
+        );
+    }
+
+    document.addEventListener('DOMContentLoaded', initializePage);
+
+    document.getElementById('emailForm').addEventListener('submit', function(event) {
+      event.preventDefault();
+      handleRequestCode();
+    });
+
+    document.getElementById('otpForm').addEventListener('submit', function(event) {
+      event.preventDefault();
+      handleVerifyCode();
+    });
+
+    document.getElementById('backToEmailButton').addEventListener('click', function() {
+      showEmailStep();
+    });
+
+    document.getElementById('logoutButton').addEventListener('click', handleLogout);
+    document.getElementById('scanAnotherButton').addEventListener('click', openScanner);
+    document.getElementById('startScanButton').addEventListener('click', openScanner);
+    document.getElementById('scanLogoutButton').addEventListener('click', handleLogout);
+
+    // لو الصفحة رجعت من الكاش بزرار الرجوع، نرجّع أزرار المسح لحالتها.
+    window.addEventListener('pageshow', function(event) {
+      if (!event.persisted) return;
+
+      ['scanAnotherButton', 'startScanButton'].forEach(function(id) {
+        const button = document.getElementById(id);
+        if (!button) return;
+        button.disabled = false;
+        button.textContent = id === 'scanAnotherButton' ? 'مسح منتج آخر' : 'مسح منتج';
+      });
+    });
+
+    /**
+     * عند فتح الصفحة أو عمل Refresh:
+     * نقرأ التوكن، ثم نتحقق من الجلسة وصلاحية البريد على السيرفر.
+     */
+    function initializePage() {
+      const saved = getLocalSession();
+
+      if (!saved.token) {
+        showLogin();
+        return;
+      }
+
+      currentToken = saved.token;
+      currentEmail = '';
+
+      hide('loginCard');
+      hide('productCard');
+      hide('productLoading');
+      show('initialLoading');
+
+      callServer(
+        'validateSession',
+        [currentToken],
+        function(result) {
+          hide('initialLoading');
+
+          if (result && result.ok && result.email) {
+            currentEmail = result.email;
+            enterApp();
+            return;
+          }
+
+          handleSessionFailure(result || {
+            code: 'SESSION_INVALID'
+          });
+        },
+        function(error) {
+          console.error('Session validation failed:', error);
+
+          // عطل الاتصال لا يعني انتهاء الجلسة.
+          // نحتفظ بالتوكن ولا نعرض بيانات المنتج.
+          hide('initialLoading');
+          hide('productCard');
+          hide('productLoading');
+          clearProductView();
+          showLogin();
+          showEmailStep();
+
+          showMessage(
+            'loginMessage',
+            'تعذر الاتصال بالخادم للتحقق من الجلسة. لم يتم عرض بيانات المنتج. حاول مرة أخرى.',
+            'error'
+          );
+        }
+      );
+    }
+
+    function handleRequestCode() {
+      if (busy) return;
+
+      const email = normalizeEmail(
+        document.getElementById('emailInput').value
+      );
+
+      if (!isValidEmail(email)) {
+        showMessage(
+          'loginMessage',
+          'اكتب بريدًا إلكترونيًا صحيحًا.',
+          'error'
+        );
+        return;
+      }
+
+      currentEmail = email;
+
+      clearMessage('loginMessage');
+      clearMessage('otpMessage');
+
+      setBusy(
+        true,
+        'requestCodeButton',
+        'جارٍ إرسال الكود...'
+      );
+
+      callServer(
+        'requestCode',
+        [email],
+        function(result) {
+          setBusy(
+            false,
+            'requestCodeButton',
+            'إرسال كود التحقق'
+          );
+
+          if (result && result.ok) {
+            showOtpStep();
+
+            showMessage(
+              'otpMessage',
+              result.message,
+              'success'
+            );
+
+            document.getElementById('otpInput').focus();
+            return;
+          }
+
+          const message = result && result.message
+            ? result.message
+            : 'تعذر إرسال كود التحقق. حاول مرة أخرى.';
+
+          showMessage('loginMessage', message, 'error');
+        },
+        function(error) {
+          console.error('Request OTP failed:', error);
+
+          setBusy(
+            false,
+            'requestCodeButton',
+            'إرسال كود التحقق'
+          );
+
+          showMessage(
+            'loginMessage',
+            'حدث خطأ أثناء الاتصال بالخادم. حاول مرة أخرى.',
+            'error'
+          );
+        }
+      );
+    }
+
+    function handleVerifyCode() {
+      if (busy) return;
+
+      const email = normalizeEmail(
+        document.getElementById('emailInput').value || currentEmail
+      );
+
+      const code = String(
+        document.getElementById('otpInput').value || ''
+      ).trim();
+
+      if (!isValidEmail(email)) {
+        showMessage(
+          'otpMessage',
+          'اكتب بريدًا إلكترونيًا صحيحًا.',
+          'error'
+        );
+
+        showEmailStep();
+        return;
+      }
+
+      if (!/^\d{6}$/.test(code)) {
+        showMessage(
+          'otpMessage',
+          'أدخل كود التحقق المكوّن من 6 أرقام.',
+          'error'
+        );
+        return;
+      }
+
+      clearMessage('otpMessage');
+
+      setBusy(
+        true,
+        'verifyCodeButton',
+        'جارٍ التحقق...'
+      );
+
+      callServer(
+        'verifyCode',
+        [email, code],
+        function(result) {
+          setBusy(
+            false,
+            'verifyCodeButton',
+            'تأكيد وتسجيل الدخول'
+          );
+
+          if (result && result.ok && result.token && result.email) {
+            try {
+              saveLocalSession(result.token);
+            } catch (error) {
+              // لا نترك الجلسة نشطة إذا تعذر حفظ التوكن.
+              callServer('logout', [result.token], function() {}, function() {});
+              clearLocalSession();
+              showLogin();
+
+              showMessage(
+                'loginMessage',
+                'المتصفح منع حفظ الجلسة. فعّل تخزين الموقع ثم حاول مرة أخرى.',
+                'error'
+              );
+              return;
+            }
+
+            currentToken = result.token;
+            currentEmail = result.email;
+
+            enterApp();
+            return;
+          }
+
+          const message = result && result.message
+            ? result.message
+            : 'تعذر التحقق من الكود. حاول مرة أخرى.';
+
+          showMessage('otpMessage', message, 'error');
+
+          if (
+            result &&
+            (result.code === 'NOT_AUTHORIZED' ||
+             result.code === 'ROLE_NOT_DEFINED')
+          ) {
+            clearLocalSession();
+            showEmailStep();
+            showMessage('loginMessage', message, 'error');
+          }
+        },
+        function(error) {
+          console.error('Verify OTP failed:', error);
+
+          setBusy(
+            false,
+            'verifyCodeButton',
+            'تأكيد وتسجيل الدخول'
+          );
+
+          showMessage(
+            'otpMessage',
+            'تعذر الاتصال بالخادم للتحقق من الكود. حاول مرة أخرى.',
+            'error'
+          );
+        }
+      );
+    }
+
+    /**
+     * طلب بيانات المنتج بالتوكن فقط.
+     */
+    function loadProduct() {
+      if (!currentToken) {
+        clearLocalSession();
+        showLogin();
+        return;
+      }
+
+      hide('productCard');
+      hide('initialLoading');
+      show('productLoading');
+
+      callServer(
+        'getProduct',
+        [PRODUCT_ID, currentToken],
+        function(result) {
+          hide('productLoading');
+
+          if (result && result.ok && result.product) {
+            renderProduct(result.product);
+            show('productCard');
+            return;
+          }
+
+          handleProductFailure(result || {
+            code: 'SERVER_ERROR'
+          });
+        },
+        function(error) {
+          console.error('Load product failed:', error);
+
+          hide('productLoading');
+          hide('productCard');
+          clearProductView();
+          showLogin();
+          showEmailStep();
+
+          showMessage(
+            'loginMessage',
+            'تعذر الاتصال بالخادم لتحميل بيانات المنتج. لم يتم عرض بيانات المنتج. حاول مرة أخرى.',
+            'error'
+          );
+        }
+      );
+    }
+
+    /**
+     * عرض المنتج. الحقول القادمة من السيرفر هي المسموحة فقط،
+     * وكل حقل غير مسموح لا يُنشأ في الصفحة أصلًا.
+     * نستخدم textContent لمنع تفسير بيانات الشيت على أنها HTML.
+     */
+    function renderProduct(product) {
+      clearProductView();
+
+      document.getElementById('productName').textContent =
+        product.name || 'بدون اسم';
+
+      document.getElementById('productId').textContent =
+        product.id || '—';
+
+      const codeElement = document.getElementById('productCode');
+      const productCode = String(product.productCode || '').trim();
+
+      if (productCode) {
+        codeElement.textContent = productCode;
+        codeElement.classList.remove('not-entered');
+      } else {
+        codeElement.textContent = NOT_ENTERED_TEXT;
+        codeElement.classList.add('not-entered');
+      }
+
+      const container = document.getElementById('productFields');
+      const fields = Array.isArray(product.fields) ? product.fields : [];
+
+      fields.forEach(function(field) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'product-field';
+
+        const label = document.createElement('div');
+        label.className = 'product-label';
+        label.textContent = field.label || '';
+
+        const value = document.createElement('div');
+        value.className = 'product-value' +
+          (field.kind === 'price' ? ' product-price' : '');
+
+        value.textContent =
+          field.value === '' ||
+          field.value === null ||
+          field.value === undefined
+            ? NOT_SPECIFIED_TEXT
+            : String(field.value);
+
+        wrapper.appendChild(label);
+        wrapper.appendChild(value);
+        container.appendChild(wrapper);
+      });
+
+      clearMessage('productMessage');
+    }
+
+    /**
+     * تفريغ بيانات المنتج من الصفحة (عند الخروج أو الأخطاء).
+     */
+    function clearProductView() {
+      document.getElementById('productName').textContent = '—';
+      document.getElementById('productId').textContent = '—';
+
+      const codeElement = document.getElementById('productCode');
+      codeElement.textContent = '—';
+      codeElement.classList.remove('not-entered');
+
+      document.getElementById('productFields').replaceChildren();
+    }
+
+    function handleSessionFailure(result) {
+      hide('initialLoading');
+      hide('productLoading');
+      hide('productCard');
+      clearProductView();
+
+      const code = result && result.code;
+
+      const message = result && result.message
+        ? result.message
+        : 'تعذر التحقق من الجلسة.';
+
+      if (code === 'SERVER_ERROR') {
+        // مشكلة مؤقتة في السيرفر أو الشيت:
+        // احتفظ بالتوكن ولا تعرض المنتج.
+        showLogin();
+        showEmailStep();
+        showMessage('loginMessage', message, 'error');
+        return;
+      }
+
+      // جلسة غير موجودة أو ملغاة أو بريد غير مصرح به أو صلاحية غير محددة.
+      clearLocalSession();
+      showLogin();
+      showEmailStep();
+      showMessage('loginMessage', message, 'error');
+    }
+
+    function handleProductFailure(result) {
+      hide('productLoading');
+      hide('productCard');
+      clearProductView();
+
+      const code = result && result.code;
+
+      const message = result && result.message
+        ? result.message
+        : 'تعذر تحميل بيانات المنتج.';
+
+      if (
+        code === 'SESSION_INVALID' ||
+        code === 'NOT_AUTHORIZED' ||
+        code === 'ROLE_NOT_DEFINED'
+      ) {
+        clearLocalSession();
+        showLogin();
+        showEmailStep();
+        showMessage('loginMessage', message, 'error');
+        return;
+      }
+
+      if (
+        code === 'PRODUCT_INCOMPLETE' ||
+        code === 'PRODUCT_NOT_FOUND'
+      ) {
+        show('productCard');
+
+        showMessage(
+          'productMessage',
+          message,
+          'error'
+        );
+
+        return;
+      }
+
+      // لا نمسح التوكن عند حدوث خطأ مؤقت في الخادم.
+      showLogin();
+      showEmailStep();
+      showMessage('loginMessage', message, 'error');
+    }
+
+    function openScanner(event) {
+      const button = event && event.currentTarget ? event.currentTarget : null;
+
+      // تأكيد للمستخدم إن الضغطة اتسجلت.
+      if (button) {
+        button.disabled = true;
+        button.textContent = 'جارٍ فتح الاسكان...';
+      }
+
+      // الاسكانر على نفس الدومين، فالتنقل عادي ومباشر.
+      // لو رجع المستخدم بزرار الرجوع، pageshow بيرجّع الأزرار.
+      window.location.href = SCANNER_URL;
+    }
+
+    function showScanStart() {
+      hide('initialLoading');
+      hide('loginCard');
+      hide('productLoading');
+      hide('productCard');
+      show('scanCard');
+    }
+
+    function enterApp() {
+      // مفيش منتج في الرابط: نعرض زرار "مسح منتج" بدل "جارٍ تحميل بيانات المنتج".
+      if (!PRODUCT_ID) {
+        showScanStart();
+        return;
+      }
+
+      showProduct();
+      loadProduct();
+    }
+
+    function goToMainPage() {
+      window.location.replace(HOME_URL);
+    }
+
+    function handleLogout() {
+      if (busy) return;
+
+      const tokenToRevoke = currentToken;
+
+      // إزالة التوكن من المتصفح وإخفاء المنتج فورًا.
+      clearLocalSession();
+      clearProductView();
+      showLogin();
+      showEmailStep();
+      clearMessage('loginMessage');
+      clearMessage('otpMessage');
+
+      if (!tokenToRevoke) {
+        goToMainPage();
+        return;
+      }
+
+      callServer(
+        'logout',
+        [tokenToRevoke],
+        function() {
+          showMessage('loginMessage', 'تم تسجيل الخروج.', 'success');
+          goToMainPage();
+        },
+        function(error) {
+          console.error('Server logout failed:', error);
+
+          showMessage(
+            'loginMessage',
+            'تم مسح التوكن من هذا المتصفح، لكن تعذر تأكيد إلغاء الجلسة على الخادم بسبب مشكلة الاتصال.',
+            'error'
+          );
+        }
+      );
+    }
+
+    /**
+     * حفظ التوكن فقط.
+     * لا يتم حفظ البريد الإلكتروني في localStorage.
+     */
+    function saveLocalSession(token) {
+      localStorage.setItem(SESSION_KEY, token);
+    }
+
+    function getLocalSession() {
+      try {
+        return {
+          token: localStorage.getItem(SESSION_KEY) || ''
+        };
+      } catch (error) {
+        return {
+          token: ''
+        };
+      }
+    }
+
+    function clearLocalSession() {
+      try {
+        localStorage.removeItem(SESSION_KEY);
+      } catch (error) {
+        console.error('Could not clear local session.');
+      }
+
+      currentEmail = '';
+      currentToken = '';
+    }
+
+    function showLogin() {
+      hide('initialLoading');
+      hide('productLoading');
+      hide('productCard');
+      hide('scanCard');
+      show('loginCard');
+    }
+
+    function showProduct() {
+      hide('initialLoading');
+      hide('loginCard');
+      hide('productLoading');
+      hide('scanCard');
+      show('productCard');
+    }
+
+    function showEmailStep() {
+      show('loginCard');
+      show('emailStep');
+      hide('otpStep');
+
+      clearMessage('otpMessage');
+
+      document.getElementById('otpInput').value = '';
+    }
+
+    function showOtpStep() {
+      show('loginCard');
+      hide('emailStep');
+      show('otpStep');
+
+      clearMessage('loginMessage');
+    }
+
+    function show(id) {
+      document.getElementById(id).classList.remove('hidden');
+    }
+
+    function hide(id) {
+      document.getElementById(id).classList.add('hidden');
+    }
+
+    function showMessage(id, message, type) {
+      const element = document.getElementById(id);
+
+      element.textContent = message || '';
+      element.className = 'message ' + (type || 'info');
+      element.classList.remove('hidden');
+    }
+
+    function clearMessage(id) {
+      const element = document.getElementById(id);
+
+      element.textContent = '';
+      element.className = 'message hidden';
+    }
+
+    function setBusy(isBusy, buttonId, buttonText) {
+      busy = isBusy;
+
+      const button = document.getElementById(buttonId);
+
+      if (button) {
+        button.disabled = isBusy;
+        button.textContent = buttonText;
+      }
+
+      document.getElementById('backToEmailButton').disabled = isBusy;
+    }
+
+    function normalizeEmail(email) {
+      return String(email || '').trim().toLowerCase();
+    }
+
+    function isValidEmail(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || ''));
+    }
+  </script>
+</body>
+</html>

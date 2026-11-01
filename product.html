@@ -561,9 +561,11 @@
       });
     });
 
-    /**
+      /**
      * عند فتح الصفحة أو عمل Refresh:
-     * نقرأ التوكن، ثم نتحقق من الجلسة وصلاحية البريد على السيرفر.
+     * - لو فيه منتج في الرابط: نطلب المنتج مباشرة، لأن getProduct
+     *   بتتحقق من الجلسة والصلاحية بنفسها (طلب واحد بدل اتنين).
+     * - لو مفيش منتج: نتحقق من الجلسة بـ validateSession ونعرض شاشة المسح.
      */
     function initializePage() {
       const saved = getLocalSession();
@@ -576,6 +578,15 @@
       currentToken = saved.token;
       currentEmail = '';
 
+      // فيه منتج في الرابط: طلب واحد بس.
+      if (PRODUCT_ID) {
+        hide('loginCard');
+        hide('productCard');
+        loadProduct();
+        return;
+      }
+
+      // مفيش منتج في الرابط: نتحقق من الجلسة ونعرض شاشة "جاهز للمسح".
       hide('loginCard');
       hide('productCard');
       hide('productLoading');

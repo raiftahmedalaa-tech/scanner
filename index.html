@@ -139,10 +139,9 @@
 
     <section class="card">
       <h2>الكاميرا لا تعمل؟</h2>
-      <p class="hint">اكتب رقم المنتج يدويًا (مثال: PROD-000123 أو 123 فقط).</p>
-
+     <p class="hint">اكتب كود المنتج (Product Code) يدويًا. مثال: SL-2009</p>
       <form id="manualForm">
-        <input id="manualInput" type="text" placeholder="PROD-000123" autocomplete="off" maxlength="50">
+        <input id="manualInput" type="text" placeholder="SL-2009" autocomplete="off" maxlength="50">
         <button id="manualBtn" type="submit">عرض المنتج</button>
       </form>
     </section>
@@ -154,8 +153,6 @@
 
     // رابط صفحة المنتج على GitHub (لازم يكون نفس مكان product.html).
     const PRODUCT_PAGE_URL = 'https://raiftahmedalaa-tech.github.io/scanner/product.html';
-    const ID_PREFIX = 'PROD-';
-    const ID_DIGITS = 6;
 
     const statusEl = document.getElementById('status');
     const startBtn = document.getElementById('startBtn');
@@ -266,17 +263,13 @@
     document.getElementById('manualForm').addEventListener('submit', function(event) {
       event.preventDefault();
 
-      let value = document.getElementById('manualInput').value.trim().toUpperCase();
+      const value = document.getElementById('manualInput').value.trim();
 
       if (!value) {
-        setStatus('اكتب رقم المنتج أولًا.', 'error');
+        setStatus('اكتب كود المنتج أولًا.', 'error');
         return;
       }
 
-      // لو كتب أرقام فقط نكمّلها للشكل الكامل PROD-000123
-      if (/^\d+$/.test(value)) {
-        value = ID_PREFIX + value.padStart(ID_DIGITS, '0');
-      }
 
       // تأكيد للمستخدم إن الضغطة اتسجلت: تعطيل الزرار + رسالة تحميل.
       const manualBtn = document.getElementById('manualBtn');

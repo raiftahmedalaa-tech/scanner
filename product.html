@@ -413,25 +413,15 @@
     </section>
 
     <section id="productCard" class="card hidden">
-      <div class="product-heading">
+           <div class="product-heading">
         <div class="product-icon" aria-hidden="true">▦</div>
         <div>
-          <p>اسم المنتج</p>
-          <h2 id="productName">—</h2>
+          <p>كود المنتج</p>
+          <h2 id="productCodeTitle" class="product-id">—</h2>
         </div>
       </div>
 
       <div id="productMessage" class="message hidden" role="status"></div>
-
-      <div class="product-field">
-        <div class="product-label">رقم المنتج</div>
-        <div id="productId" class="product-value product-id">—</div>
-      </div>
-
-      <div class="product-field">
-        <div class="product-label">كود المنتج</div>
-        <div id="productCode" class="product-value">—</div>
-      </div>
 
       <!-- الحقول (الأسعار والمخزون) تُبنى ديناميكيًا حسب صلاحية المستخدم -->
       <div id="productFields"></div>
@@ -863,25 +853,11 @@
      * وكل حقل غير مسموح لا يُنشأ في الصفحة أصلًا.
      * نستخدم textContent لمنع تفسير بيانات الشيت على أنها HTML.
      */
-    function renderProduct(product) {
+       function renderProduct(product) {
       clearProductView();
 
-      document.getElementById('productName').textContent =
-        product.name || 'بدون اسم';
-
-      document.getElementById('productId').textContent =
-        product.id || '—';
-
-      const codeElement = document.getElementById('productCode');
-      const productCode = String(product.productCode || '').trim();
-
-      if (productCode) {
-        codeElement.textContent = productCode;
-        codeElement.classList.remove('not-entered');
-      } else {
-        codeElement.textContent = NOT_ENTERED_TEXT;
-        codeElement.classList.add('not-entered');
-      }
+      document.getElementById('productCodeTitle').textContent =
+        product.code || '—';
 
       const container = document.getElementById('productFields');
       const fields = Array.isArray(product.fields) ? product.fields : [];
@@ -913,17 +889,8 @@
       clearMessage('productMessage');
     }
 
-    /**
-     * تفريغ بيانات المنتج من الصفحة (عند الخروج أو الأخطاء).
-     */
     function clearProductView() {
-      document.getElementById('productName').textContent = '—';
-      document.getElementById('productId').textContent = '—';
-
-      const codeElement = document.getElementById('productCode');
-      codeElement.textContent = '—';
-      codeElement.classList.remove('not-entered');
-
+      document.getElementById('productCodeTitle').textContent = '—';
       document.getElementById('productFields').replaceChildren();
     }
 
@@ -980,7 +947,8 @@
 
       if (
         code === 'PRODUCT_INCOMPLETE' ||
-        code === 'PRODUCT_NOT_FOUND'
+        code === 'PRODUCT_NOT_FOUND' ||
+        code === 'PRODUCT_DUPLICATE'
       ) {
         show('productCard');
 

@@ -594,8 +594,13 @@
     const SCANNER_URL = 'https://raiftahmedalaa-tech.github.io/scanner/';
     const REQUEST_TIMEOUT_MS = 30000;
     // رابط سيرفر المخزون. للتجربة على نفس الجهاز: localhost. هيتغير لرابط الـ tunnel بعدين.
-        const STOCK_API_URL = 'https://transmitted-highlighted-raid-still.trycloudflare.com/stock';
-    const STOCK_TIMEOUT_MS = 240000;
+    // رابط سيرفر المخزون (من غير /stock في الآخر).
+    const STOCK_API_BASE = 'https://transmitted-highlighted-raid-still.trycloudflare.com';
+    const STOCK_POLL_MS = 3000;               // نسأل عن النتيجة كل 3 ثواني
+    const STOCK_TIMEOUT_MS = 600000;          // أقصى انتظار كلي: 10 دقايق
+    const STOCK_REQUEST_TIMEOUT_MS = 30000;   // مهلة كل طلب منفرد
+    const STOCK_MAX_FAILURES = 5;             // عدد انقطاعات الشبكة المتتالية المسموحة
+    let stockPollTimer = null;
     let stockController = null;
     let stockRequestId = 0;
     // المتصفح يحتفظ بالتوكن فقط، ولا نخزن البريد الإلكتروني.
@@ -1024,8 +1029,13 @@
       document.getElementById('productCodeTitle').textContent = '—';
       document.getElementById('productFields').replaceChildren();
     }
-    function resetStockView() {
+       function resetStockView() {
       stockRequestId++;
+
+      if (stockPollTimer) {
+        window.clearTimeout(stockPollTimer);
+        stockPollTimer = null;
+      }
 
       if (stockController) {
         stockController.abort();
@@ -1100,60 +1110,129 @@
       show('stockResult');
     }
 
+    function stockPost(path, body, signal) {
+      return fetch(STOCK_API_BASE + path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(body),
+        signal: signal
+      }).then(function(response) {
+        return response.json();
+      });
+    }
+
     function loadStock(code) {
       const requestId = ++stockRequestId;
-      const controller = new AbortController();
-      stockController = controller;
-
-      const timer = window.setTimeout(function() {
-        controller.abort();
-      }, STOCK_TIMEOUT_MS);
+      const startedAt = Date.now();
+      let failures = 0;
 
       show('stockSection');
       show('stockLoading');
       hide('stockResult');
       clearMessage('stockMessage');
 
-      fetch(STOCK_API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ token: currentToken, code: code }),
-        signal: controller.signal
-      })
-        .then(function(response) {
-          return response.json();
-        })
+      function isStale() {
+        return requestId !== stockRequestId;
+      }
+
+      function fail(errorCode, message) {
+        if (isStale()) return;
+
+        hide('stockLoading');
+        showStockMessage(errorCode, message);
+      }
+
+      function poll(jobId) {
+        if (isStale()) return;
+
+        if (Date.now() - startedAt > STOCK_TIMEOUT_MS) {
+          fail('STOCK_ERROR', 'استغرق جلب المخزون وقتًا طويلًا. حاول مرة أخرى.');
+          return;
+        }
+
+        const controller = new AbortController();
+        stockController = controller;
+
+        const timer = window.setTimeout(function() {
+          controller.abort();
+        }, STOCK_REQUEST_TIMEOUT_MS);
+
+        stockPost('/stock/result', { token: currentToken, jobId: jobId }, controller.signal)
+          .then(function(data) {
+            window.clearTimeout(timer);
+
+            if (isStale()) return;
+
+            failures = 0;
+
+            // لسه البحث شغّال: نسأل تاني بعد شوية.
+            if (data && data.ok && data.done === false) {
+              stockPollTimer = window.setTimeout(function() {
+                poll(jobId);
+              }, STOCK_POLL_MS);
+              return;
+            }
+
+            hide('stockLoading');
+
+            if (data && data.ok) {
+              renderStock(data);
+              return;
+            }
+
+            showStockMessage(data && data.code, data && data.message);
+          })
+          .catch(function(error) {
+            window.clearTimeout(timer);
+
+            if (isStale()) return;
+
+            // انقطاع مؤقت في الشبكة (مثلًا ضعف إشارة الموبايل): نحاول تاني.
+            failures++;
+            console.error('Stock poll failed:', error);
+
+            if (failures >= STOCK_MAX_FAILURES) {
+              fail('STOCK_ERROR', 'تعذر الاتصال بسيرفر المخزون. تأكد إنه شغّال.');
+              return;
+            }
+
+            stockPollTimer = window.setTimeout(function() {
+              poll(jobId);
+            }, STOCK_POLL_MS);
+          });
+      }
+
+      // 1) نبدأ الطلب (بيرجع فورًا بـ jobId).
+      const startController = new AbortController();
+      stockController = startController;
+
+      const startTimer = window.setTimeout(function() {
+        startController.abort();
+      }, STOCK_REQUEST_TIMEOUT_MS);
+
+      stockPost('/stock/start', { token: currentToken, code: code }, startController.signal)
         .then(function(data) {
-          window.clearTimeout(timer);
+          window.clearTimeout(startTimer);
 
-          if (requestId !== stockRequestId) return;
+          if (isStale()) return;
 
-          hide('stockLoading');
-
-          if (data && data.ok) {
-            renderStock(data);
+          if (data && data.ok && data.jobId) {
+            poll(data.jobId);
             return;
           }
 
+          hide('stockLoading');
           showStockMessage(data && data.code, data && data.message);
         })
         .catch(function(error) {
-          window.clearTimeout(timer);
+          window.clearTimeout(startTimer);
 
-          if (requestId !== stockRequestId) return;
+          if (isStale()) return;
 
-          console.error('Stock request failed:', error);
-          hide('stockLoading');
-
-          showStockMessage(
-            'STOCK_ERROR',
-            error && error.name === 'AbortError'
-              ? 'استغرق جلب المخزون وقتًا طويلًا. حاول مرة أخرى.'
-              : 'تعذر الاتصال بسيرفر المخزون. تأكد إنه شغّال.'
-          );
+          console.error('Stock start failed:', error);
+          fail('STOCK_ERROR', 'تعذر الاتصال بسيرفر المخزون. تأكد إنه شغّال.');
         });
     }
-  
     function handleSessionFailure(result) {
       hide('initialLoading');
       hide('productLoading');

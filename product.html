@@ -318,7 +318,97 @@
       text-align: right;
       font-family: Arial, sans-serif;
     }
+    .stock-section {
+      padding: 16px 0 4px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 4px;
+    }
 
+    .stock-loading {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.8;
+      padding: 8px 0 12px;
+    }
+
+    .spinner.small {
+      width: 22px;
+      height: 22px;
+      border-width: 3px;
+      margin: 0;
+      flex-shrink: 0;
+    }
+
+    .stock-summary {
+      margin: 6px 0 12px;
+    }
+
+    .stock-name {
+      font-size: 16px;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+
+    .stock-code {
+      direction: ltr;
+      text-align: right;
+      font-family: Arial, sans-serif;
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .stock-total {
+      margin-top: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--success);
+    }
+
+    .stock-table-wrap {
+      max-height: 60vh;
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 12px;
+    }
+
+    .stock-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .stock-table th {
+      position: sticky;
+      top: 0;
+      background: #f8fafc;
+      text-align: right;
+      padding: 10px;
+      font-size: 12px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stock-table td {
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--border);
+      overflow-wrap: anywhere;
+    }
+
+    .stock-table tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .stock-qty {
+      direction: ltr;
+      text-align: right;
+      font-weight: 700;
+      white-space: nowrap;
+    }
     @media (max-width: 480px) {
       .page {
         padding: 20px 12px;
@@ -422,7 +512,37 @@
       </div>
 
       <div id="productMessage" class="message hidden" role="status"></div>
+      <div id="stockSection" class="stock-section hidden">
+        <div class="product-label">المخزون</div>
 
+        <div id="stockLoading" class="stock-loading hidden">
+          <div class="spinner small" aria-hidden="true"></div>
+          <span>جارٍ جلب المخزون من النظام... قد يستغرق ذلك دقيقة للمنتجات الكبيرة.</span>
+        </div>
+
+        <div id="stockMessage" class="message hidden" role="status"></div>
+
+        <div id="stockResult" class="hidden">
+          <div class="stock-summary">
+            <div id="stockProductName" class="stock-name"></div>
+            <div id="stockProductCode" class="stock-code"></div>
+            <div id="stockTotal" class="stock-total"></div>
+          </div>
+
+          <div class="stock-table-wrap">
+            <table class="stock-table">
+              <thead>
+                <tr>
+                  <th>اللون</th>
+                  <th>المخزن</th>
+                  <th>الكمية</th>
+                </tr>
+              </thead>
+              <tbody id="stockBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
       <!-- الحقول (الأسعار والمخزون) تُبنى ديناميكيًا حسب صلاحية المستخدم -->
       <div id="productFields"></div>
 
@@ -473,7 +593,11 @@
     const HOME_URL = 'https://raiftahmedalaa-tech.github.io/scanner/product.html';
     const SCANNER_URL = 'https://raiftahmedalaa-tech.github.io/scanner/';
     const REQUEST_TIMEOUT_MS = 30000;
-
+    // رابط سيرفر المخزون. للتجربة على نفس الجهاز: localhost. هيتغير لرابط الـ tunnel بعدين.
+    const STOCK_API_URL = 'http://localhost:3000/stock';
+    const STOCK_TIMEOUT_MS = 240000;
+    let stockController = null;
+    let stockRequestId = 0;
     // المتصفح يحتفظ بالتوكن فقط، ولا نخزن البريد الإلكتروني.
     const SESSION_KEY = 'raif_product_session_v1';
     const PRODUCT_ID = (new URLSearchParams(window.location.search).get('id') || '').trim();
@@ -853,7 +977,7 @@
      * وكل حقل غير مسموح لا يُنشأ في الصفحة أصلًا.
      * نستخدم textContent لمنع تفسير بيانات الشيت على أنها HTML.
      */
-       function renderProduct(product) {
+    function renderProduct(product) {
       clearProductView();
 
       document.getElementById('productCodeTitle').textContent =
@@ -887,13 +1011,149 @@
       });
 
       clearMessage('productMessage');
+
+      // المخزون من الـ ERP (للصلاحيات المسموحة فقط).
+      if (product.canViewStock) {
+        loadStock(product.code);
+      }
     }
 
     function clearProductView() {
+      resetStockView();
+
       document.getElementById('productCodeTitle').textContent = '—';
       document.getElementById('productFields').replaceChildren();
     }
+    function resetStockView() {
+      stockRequestId++;
 
+      if (stockController) {
+        stockController.abort();
+        stockController = null;
+      }
+
+      hide('stockSection');
+      hide('stockLoading');
+      hide('stockResult');
+      clearMessage('stockMessage');
+      document.getElementById('stockBody').replaceChildren();
+    }
+
+    function formatQuantity(value) {
+      const n = Number(value);
+
+      return Number.isFinite(n)
+        ? n.toLocaleString('en-US', { maximumFractionDigits: 3 })
+        : String(value);
+    }
+
+    function showStockMessage(code, message) {
+      const informational =
+        code === 'NOT_FOUND' || code === 'NO_STOCK' || code === 'NO_MATCH';
+
+      showMessage(
+        'stockMessage',
+        message || 'تعذر جلب المخزون حاليًا.',
+        informational ? 'info' : 'error'
+      );
+    }
+
+    function renderStock(data) {
+      const rows = Array.isArray(data.rows) ? data.rows : [];
+      const first = rows[0] || {};
+
+      document.getElementById('stockProductName').textContent = first.productName || '';
+      document.getElementById('stockProductCode').textContent = first.productCode || '';
+      document.getElementById('stockTotal').textContent =
+        'إجمالي المخزون: ' + formatQuantity(data.totalStock);
+
+      const body = document.getElementById('stockBody');
+      body.replaceChildren();
+
+      const fragment = document.createDocumentFragment();
+
+      rows.forEach(function(row) {
+        const tr = document.createElement('tr');
+
+        const color = document.createElement('td');
+        color.textContent = row.color || '—';
+
+        const warehouse = document.createElement('td');
+        warehouse.textContent = row.warehouseName || '—';
+
+        const quantity = document.createElement('td');
+        quantity.className = 'stock-qty';
+        quantity.textContent = formatQuantity(row.quantity);
+
+        tr.appendChild(color);
+        tr.appendChild(warehouse);
+        tr.appendChild(quantity);
+        fragment.appendChild(tr);
+      });
+
+      body.appendChild(fragment);
+
+      if (Array.isArray(data.warnings) && data.warnings.length > 0) {
+        showMessage('stockMessage', 'تنبيه: قد تكون بعض بيانات المخزون غير مكتملة.', 'info');
+      }
+
+      show('stockResult');
+    }
+
+    function loadStock(code) {
+      const requestId = ++stockRequestId;
+      const controller = new AbortController();
+      stockController = controller;
+
+      const timer = window.setTimeout(function() {
+        controller.abort();
+      }, STOCK_TIMEOUT_MS);
+
+      show('stockSection');
+      show('stockLoading');
+      hide('stockResult');
+      clearMessage('stockMessage');
+
+      fetch(STOCK_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ token: currentToken, code: code }),
+        signal: controller.signal
+      })
+        .then(function(response) {
+          return response.json();
+        })
+        .then(function(data) {
+          window.clearTimeout(timer);
+
+          if (requestId !== stockRequestId) return;
+
+          hide('stockLoading');
+
+          if (data && data.ok) {
+            renderStock(data);
+            return;
+          }
+
+          showStockMessage(data && data.code, data && data.message);
+        })
+        .catch(function(error) {
+          window.clearTimeout(timer);
+
+          if (requestId !== stockRequestId) return;
+
+          console.error('Stock request failed:', error);
+          hide('stockLoading');
+
+          showStockMessage(
+            'STOCK_ERROR',
+            error && error.name === 'AbortError'
+              ? 'استغرق جلب المخزون وقتًا طويلًا. حاول مرة أخرى.'
+              : 'تعذر الاتصال بسيرفر المخزون. تأكد إنه شغّال.'
+          );
+        });
+    }
+  
     function handleSessionFailure(result) {
       hide('initialLoading');
       hide('productLoading');

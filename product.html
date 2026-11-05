@@ -517,7 +517,7 @@
 
         <div id="stockLoading" class="stock-loading hidden">
           <div class="spinner small" aria-hidden="true"></div>
-          <span>جارٍ جلب المخزون من النظام... قد يستغرق ذلك دقيقة للمنتجات الكبيرة.</span>
+        <span id="stockLoadingText">جارٍ جلب المخزون من النظام...</span>
         </div>
 
         <div id="stockMessage" class="message hidden" role="status"></div>
@@ -595,9 +595,9 @@
     const REQUEST_TIMEOUT_MS = 30000;
     // رابط سيرفر المخزون. للتجربة على نفس الجهاز: localhost. هيتغير لرابط الـ tunnel بعدين.
     // رابط سيرفر المخزون (من غير /stock في الآخر).
-   const STOCK_API_BASE = 'https://cafe-tool-tigers-enters.trycloudflare.com';
+    const STOCK_API_BASE = 'https://cafe-tool-tigers-enters.trycloudflare.com';
     const STOCK_POLL_MS = 3000;               // نسأل عن النتيجة كل 3 ثواني
-    const STOCK_TIMEOUT_MS = 600000;          // أقصى انتظار كلي: 10 دقايق
+    const STOCK_TIMEOUT_MS = 30 * 60 * 1000;          // أقصى انتظار كلي: 30 دقيقة
     const STOCK_REQUEST_TIMEOUT_MS = 30000;   // مهلة كل طلب منفرد
     const STOCK_MAX_FAILURES = 5;             // عدد انقطاعات الشبكة المتتالية المسموحة
     let stockPollTimer = null;
@@ -1067,7 +1067,25 @@
         informational ? 'info' : 'error'
       );
     }
+function formatEta(seconds) {
+  return seconds < 60 ? seconds + ' ثانية' : Math.ceil(seconds / 60) + ' دقيقة';
+}
 
+function updateQueueText(data) {
+  const el = document.getElementById('stockLoadingText');
+  if (!el) return;
+
+  if (data.state === 'running') {
+    el.textContent = 'جارٍ البحث عن المخزون الآن...';
+    return;
+  }
+
+  if (data.position > 0) {
+    let text = 'أنت رقم ' + data.position + ' في الطابور';
+    if (data.etaSeconds > 0) text += ' (الوقت المتوقع تقريبًا: ' + formatEta(data.etaSeconds) + ')';
+    el.textContent = text;
+  }
+}
     function renderStock(data) {
       const rows = Array.isArray(data.rows) ? data.rows : [];
       const first = rows[0] || {};
@@ -1128,6 +1146,7 @@
 
       show('stockSection');
       show('stockLoading');
+      document.getElementById('stockLoadingText').textContent = 'جارٍ جلب المخزون من النظام...';
       hide('stockResult');
       clearMessage('stockMessage');
 
@@ -1165,8 +1184,8 @@
 
             failures = 0;
 
-            // لسه البحث شغّال: نسأل تاني بعد شوية.
-            if (data && data.ok && data.done === false) {
+             if (data && data.ok && data.done === false) {
+              updateQueueText(data);   // <== السطر الجديد
               stockPollTimer = window.setTimeout(function() {
                 poll(jobId);
               }, STOCK_POLL_MS);

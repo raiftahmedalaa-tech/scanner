@@ -21,9 +21,7 @@
       --shadow: 0 12px 35px rgba(15, 23, 42, .08);
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -46,30 +44,6 @@
       justify-content: center;
     }
 
-    .brand {
-      text-align: center;
-      margin-bottom: 22px;
-    }
-
-    .brand-icon {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 64px;
-      height: 64px;
-      border-radius: 20px;
-      background: #dbeafe;
-      color: var(--primary);
-      font-size: 30px;
-      margin-bottom: 12px;
-    }
-
-    .brand h1 {
-      margin: 0 0 8px;
-      font-size: 26px;
-      font-weight: 800;
-    }
-
     .card {
       background: var(--surface);
       border: 1px solid rgba(226, 232, 240, .9);
@@ -79,10 +53,7 @@
       margin-bottom: 16px;
     }
 
-    .card h2 {
-      font-size: 21px;
-      margin: 0 0 10px;
-    }
+    .card h2 { font-size: 21px; margin: 0 0 10px; }
 
     .description {
       color: var(--muted);
@@ -91,9 +62,7 @@
       margin: 0 0 22px;
     }
 
-    .field {
-      margin-bottom: 16px;
-    }
+    .field { margin-bottom: 16px; }
 
     label {
       display: block;
@@ -121,11 +90,6 @@
       box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
     }
 
-    input:disabled {
-      background: #f8fafc;
-      color: #64748b;
-    }
-
     .otp-input {
       direction: ltr;
       text-align: center;
@@ -149,18 +113,9 @@
       transition: background .2s, transform .1s;
     }
 
-    button:hover {
-      background: var(--primary-dark);
-    }
-
-    button:active {
-      transform: scale(.99);
-    }
-
-    button:disabled {
-      opacity: .6;
-      cursor: not-allowed;
-    }
+    button:hover { background: var(--primary-dark); }
+    button:active { transform: scale(.99); }
+    button:disabled { opacity: .6; cursor: not-allowed; }
 
     .logout-button {
       background: #fff;
@@ -168,9 +123,7 @@
       border: 1px solid #fecaca;
     }
 
-    .logout-button:hover {
-      background: #fef2f2;
-    }
+    .logout-button:hover { background: #fef2f2; }
 
     .text-button {
       display: block;
@@ -183,10 +136,7 @@
       font-size: 14px;
     }
 
-    .text-button:hover {
-      background: transparent;
-      text-decoration: underline;
-    }
+    .text-button:hover { background: transparent; text-decoration: underline; }
 
     .message {
       border-radius: 12px;
@@ -197,32 +147,13 @@
       overflow-wrap: anywhere;
     }
 
-    .message.error {
-      background: #fef2f2;
-      border: 1px solid #fecaca;
-      color: var(--danger);
-    }
+    .message.error   { background: #fef2f2; border: 1px solid #fecaca; color: var(--danger); }
+    .message.success { background: #f0fdf4; border: 1px solid #bbf7d0; color: var(--success); }
+    .message.info    { background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; }
 
-    .message.success {
-      background: #f0fdf4;
-      border: 1px solid #bbf7d0;
-      color: var(--success);
-    }
+    .hidden { display: none !important; }
 
-    .message.info {
-      background: #eff6ff;
-      border: 1px solid #bfdbfe;
-      color: #1d4ed8;
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    .loading-area {
-      text-align: center;
-      padding: 28px 12px;
-    }
+    .loading-area { text-align: center; padding: 28px 12px; }
 
     .spinner {
       width: 42px;
@@ -234,25 +165,11 @@
       margin: 0 auto 16px;
     }
 
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-    .loading-area p {
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.8;
-      margin: 0;
-    }
+    .loading-area p { color: var(--muted); font-size: 14px; line-height: 1.8; margin: 0; }
 
-    .product-heading {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 22px;
-    }
+    .product-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
 
     .product-icon {
       width: 54px;
@@ -267,32 +184,37 @@
       font-size: 25px;
     }
 
-    .product-heading h2 {
-      margin: 0 0 6px;
-      font-size: 21px;
+    .product-heading h2 { margin: 0 0 6px; font-size: 21px; overflow-wrap: anywhere; }
+    .product-heading p { color: var(--muted); margin: 0; font-size: 13px; }
+
+    .product-id {
+      direction: ltr;
+      text-align: right;
+      font-family: Arial, sans-serif;
+    }
+
+    /* اسم المنتج + آخر تحديث */
+    .product-meta { margin-bottom: 8px; }
+
+    .meta-name {
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.7;
       overflow-wrap: anywhere;
     }
 
-    .product-heading p {
-      color: var(--muted);
-      margin: 0;
-      font-size: 13px;
-    }
-
-    .product-field {
-      padding: 16px 0;
-      border-bottom: 1px solid var(--border);
-    }
-
-    #productFields .product-field:last-child {
-      border-bottom: 0;
-    }
-
-    .product-label {
+    .meta-update {
       color: var(--muted);
       font-size: 13px;
-      margin-bottom: 8px;
+      margin: 4px 0 12px;
     }
+
+    .meta-update bdi { direction: ltr; unicode-bidi: isolate; font-family: Arial, sans-serif; }
+
+    .product-field { padding: 16px 0; border-bottom: 1px solid var(--border); }
+    #productFields .product-field:last-child { border-bottom: 0; }
+
+    .product-label { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
 
     .product-value {
       font-size: 16px;
@@ -302,71 +224,9 @@
       white-space: pre-wrap;
     }
 
-    .product-value.not-entered {
-      color: var(--muted);
-      font-weight: 500;
-    }
+    .product-price { color: var(--success); font-size: 23px; font-weight: 800; }
 
-    .product-price {
-      color: var(--success);
-      font-size: 23px;
-      font-weight: 800;
-    }
-
-    .product-id {
-      direction: ltr;
-      text-align: right;
-      font-family: Arial, sans-serif;
-    }
-    .stock-section {
-      padding: 16px 0 4px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 4px;
-    }
-
-    .stock-loading {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.8;
-      padding: 8px 0 12px;
-    }
-
-    .spinner.small {
-      width: 22px;
-      height: 22px;
-      border-width: 3px;
-      margin: 0;
-      flex-shrink: 0;
-    }
-
-    .stock-summary {
-      margin: 6px 0 12px;
-    }
-
-    .stock-name {
-      font-size: 16px;
-      font-weight: 700;
-      overflow-wrap: anywhere;
-    }
-
-    .stock-code {
-      direction: ltr;
-      text-align: right;
-      font-family: Arial, sans-serif;
-      font-size: 13px;
-      color: var(--muted);
-      margin-top: 2px;
-    }
-
-    .stock-total {
-      margin-top: 8px;
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--success);
-    }
+    .stock-section { padding: 16px 0 4px; border-top: 1px solid var(--border); margin-top: 4px; }
 
     .stock-table-wrap {
       max-height: 60vh;
@@ -376,11 +236,7 @@
       margin-bottom: 12px;
     }
 
-    .stock-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
+    .stock-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 
     .stock-table th {
       position: sticky;
@@ -399,36 +255,20 @@
       overflow-wrap: anywhere;
     }
 
-    .stock-table tr:last-child td {
-      border-bottom: 0;
-    }
+    .stock-table tr:last-child td { border-bottom: 0; }
 
-    .stock-qty {
-      direction: ltr;
-      text-align: right;
-      font-weight: 700;
-      white-space: nowrap;
-    }
+    .stock-wh { direction: ltr; text-align: right; font-family: Arial, sans-serif; font-weight: 700; }
+    .stock-qty { direction: ltr; text-align: right; font-weight: 700; white-space: nowrap; }
+
     @media (max-width: 480px) {
-      .page {
-        padding: 20px 12px;
-      }
-
-      .card {
-        padding: 21px 17px;
-      }
-
-      .brand h1 {
-        font-size: 23px;
-      }
+      .page { padding: 20px 12px; }
+      .card { padding: 21px 17px; }
     }
   </style>
 </head>
 
 <body>
   <main class="page">
-    <header class="brand">
-    </header>
 
     <section id="initialLoading" class="card loading-area">
       <div class="spinner" aria-hidden="true"></div>
@@ -447,18 +287,10 @@
         <form id="emailForm">
           <div class="field">
             <label for="emailInput">البريد الإلكتروني</label>
-            <input
-              id="emailInput"
-              type="email"
-              autocomplete="email"
-              placeholder="name@example.com"
-              required
-            >
+            <input id="emailInput" type="email" autocomplete="email" placeholder="name@example.com" required>
           </div>
 
-          <button id="requestCodeButton" type="submit">
-            إرسال كود التحقق
-          </button>
+          <button id="requestCodeButton" type="submit">إرسال كود التحقق</button>
         </form>
       </div>
 
@@ -486,14 +318,10 @@
             >
           </div>
 
-          <button id="verifyCodeButton" type="submit">
-            تأكيد وتسجيل الدخول
-          </button>
+          <button id="verifyCodeButton" type="submit">تأكيد وتسجيل الدخول</button>
         </form>
 
-        <button id="backToEmailButton" class="text-button" type="button">
-          تغيير البريد الإلكتروني
-        </button>
+        <button id="backToEmailButton" class="text-button" type="button">تغيير البريد الإلكتروني</button>
       </div>
     </section>
 
@@ -503,7 +331,7 @@
     </section>
 
     <section id="productCard" class="card hidden">
-           <div class="product-heading">
+      <div class="product-heading">
         <div class="product-icon" aria-hidden="true">▦</div>
         <div>
           <p>كود المنتج</p>
@@ -512,76 +340,49 @@
       </div>
 
       <div id="productMessage" class="message hidden" role="status"></div>
+
+      <!-- اسم المنتج ثم آخر تحديث للمخزون (للصلاحيات المسموحة فقط) -->
+      <div id="productMeta" class="product-meta hidden">
+        <div id="metaName" class="meta-name"></div>
+        <div id="metaUpdate" class="meta-update"></div>
+        <div id="staleMessage" class="message hidden" role="status"></div>
+      </div>
+
+      <!-- الأسعار حسب الصلاحية -->
+      <div id="productFields"></div>
+
+      <!-- المخزون: صف لكل مخزن -->
       <div id="stockSection" class="stock-section hidden">
         <div class="product-label">المخزون</div>
 
-        <div id="stockLoading" class="stock-loading hidden">
-          <div class="spinner small" aria-hidden="true"></div>
-        <span id="stockLoadingText">جارٍ جلب المخزون من النظام...</span>
-        </div>
-
         <div id="stockMessage" class="message hidden" role="status"></div>
 
-        <div id="stockResult" class="hidden">
-          <div class="stock-summary">
-            <div id="stockProductName" class="stock-name"></div>
-            <div id="stockProductCode" class="stock-code"></div>
-            <div id="stockTotal" class="stock-total"></div>
-          </div>
-
-          <div class="stock-table-wrap">
-            <table class="stock-table">
-              <thead>
-                <tr>
-                  <th>اللون</th>
-                  <th>المخزن</th>
-                  <th>الكمية</th>
-                </tr>
-              </thead>
-              <tbody id="stockBody"></tbody>
-            </table>
-          </div>
+        <div id="stockResult" class="stock-table-wrap hidden">
+          <table class="stock-table">
+            <thead>
+              <tr>
+                <th>المخزن</th>
+                <th>اللون</th>
+                <th>الكمية</th>
+              </tr>
+            </thead>
+            <tbody id="stockBody"></tbody>
+          </table>
         </div>
       </div>
-      <!-- الحقول (الأسعار والمخزون) تُبنى ديناميكيًا حسب صلاحية المستخدم -->
-      <div id="productFields"></div>
 
-      <button
-        id="scanAnotherButton"
-        type="button"
-        style="margin-top:12px"
-      >
-        مسح منتج آخر
-      </button>
+      <button id="scanAnotherButton" type="button" style="margin-top:12px">مسح منتج آخر</button>
 
-      <button
-        id="logoutButton"
-        class="logout-button"
-        type="button"
-        style="margin-top:12px"
-      >
-        تسجيل الخروج
-      </button>
+      <button id="logoutButton" class="logout-button" type="button" style="margin-top:12px">تسجيل الخروج</button>
     </section>
 
     <section id="scanCard" class="card hidden">
       <h2>جاهز للمسح</h2>
-      <p class="description">
-        اضغط الزر لفتح الكاميرا ومسح QR Code الخاص بالمنتج.
-      </p>
+      <p class="description">اضغط الزر لفتح الكاميرا ومسح QR Code الخاص بالمنتج.</p>
 
-      <button id="startScanButton" type="button">
-        مسح منتج
-      </button>
+      <button id="startScanButton" type="button">مسح منتج</button>
 
-      <button
-        id="scanLogoutButton"
-        class="logout-button"
-        type="button"
-        style="margin-top:12px"
-      >
-        تسجيل الخروج
-      </button>
+      <button id="scanLogoutButton" class="logout-button" type="button" style="margin-top:12px">تسجيل الخروج</button>
     </section>
   </main>
 
@@ -593,38 +394,21 @@
     const HOME_URL = 'https://raiftahmedalaa-tech.github.io/scanner/product.html';
     const SCANNER_URL = 'https://raiftahmedalaa-tech.github.io/scanner/';
     const REQUEST_TIMEOUT_MS = 30000;
-    // رابط سيرفر المخزون. للتجربة على نفس الجهاز: localhost. هيتغير لرابط الـ tunnel بعدين.
-    // رابط سيرفر المخزون (من غير /stock في الآخر).
-    const STOCK_API_BASE = 'https://specialties-cement-jewel-cheers.trycloudflare.com';
-    // The server supports long polling up to 25 seconds. The browser request
-    // timeout is intentionally longer than the server-side long-poll window.
-    const STOCK_LONG_POLL_MS = 25000;
-    const STOCK_RETRY_BASE_MS = 500;
-    const STOCK_TIMEOUT_MS = 30 * 60 * 1000;
-    const STOCK_REQUEST_TIMEOUT_MS = STOCK_LONG_POLL_MS + 10000;
-    const STOCK_MAX_FAILURES = 5;
-    let stockPollTimer = null;
-    let stockController = null;
-    let stockRequestId = 0;
+
     // المتصفح يحتفظ بالتوكن فقط، ولا نخزن البريد الإلكتروني.
     const SESSION_KEY = 'raif_product_session_v1';
     const PRODUCT_ID = (new URLSearchParams(window.location.search).get('id') || '').trim();
-    const NOT_ENTERED_TEXT = 'لم يتم إدخاله';
     const NOT_SPECIFIED_TEXT = 'غير محدد';
     let currentEmail = '';
     let currentToken = '';
     let busy = false;
 
     /**
-     * بديل google.script.run: يرسل الطلب للـ API ويستدعي
-     * onSuccess(result) أو onFailure(error) بنفس الشكل القديم.
-     * نستخدم text/plain عشان المتصفح ما يعملش طلب preflight.
+     * يرسل الطلب للـ API. نستخدم text/plain عشان المتصفح ما يعملش طلب preflight.
      */
     function callServer(action, args, onSuccess, onFailure) {
       const controller = new AbortController();
-      const timer = window.setTimeout(function() {
-        controller.abort();
-      }, REQUEST_TIMEOUT_MS);
+      const timer = window.setTimeout(function() { controller.abort(); }, REQUEST_TIMEOUT_MS);
 
       fetch(API_URL, {
         method: 'POST',
@@ -633,20 +417,12 @@
         signal: controller.signal
       })
         .then(function(response) {
-          if (!response.ok) {
-            throw new Error('HTTP ' + response.status);
-          }
+          if (!response.ok) throw new Error('HTTP ' + response.status);
           return response.json();
         })
         .then(
-          function(data) {
-            window.clearTimeout(timer);
-            onSuccess(data);
-          },
-          function(error) {
-            window.clearTimeout(timer);
-            onFailure(error);
-          }
+          function(data) { window.clearTimeout(timer); onSuccess(data); },
+          function(error) { window.clearTimeout(timer); onFailure(error); }
         );
     }
 
@@ -662,10 +438,7 @@
       handleVerifyCode();
     });
 
-    document.getElementById('backToEmailButton').addEventListener('click', function() {
-      showEmailStep();
-    });
-
+    document.getElementById('backToEmailButton').addEventListener('click', function() { showEmailStep(); });
     document.getElementById('logoutButton').addEventListener('click', handleLogout);
     document.getElementById('scanAnotherButton').addEventListener('click', openScanner);
     document.getElementById('startScanButton').addEventListener('click', openScanner);
@@ -683,11 +456,9 @@
       });
     });
 
-      /**
-     * عند فتح الصفحة أو عمل Refresh:
-     * - لو فيه منتج في الرابط: نطلب المنتج مباشرة، لأن getProduct
-     *   بتتحقق من الجلسة والصلاحية بنفسها (طلب واحد بدل اتنين).
-     * - لو مفيش منتج: نتحقق من الجلسة بـ validateSession ونعرض شاشة المسح.
+    /**
+     * - لو فيه منتج في الرابط: نطلب المنتج مباشرة (getProduct بتتحقق من الجلسة والصلاحية).
+     * - لو مفيش: نتحقق من الجلسة ونعرض شاشة المسح.
      */
     function initializePage() {
       const saved = getLocalSession();
@@ -700,7 +471,6 @@
       currentToken = saved.token;
       currentEmail = '';
 
-      // فيه منتج في الرابط: طلب واحد بس.
       if (PRODUCT_ID) {
         hide('loginCard');
         hide('productCard');
@@ -708,7 +478,6 @@
         return;
       }
 
-      // مفيش منتج في الرابط: نتحقق من الجلسة ونعرض شاشة "جاهز للمسح".
       hide('loginCard');
       hide('productCard');
       hide('productLoading');
@@ -726,15 +495,12 @@
             return;
           }
 
-          handleSessionFailure(result || {
-            code: 'SESSION_INVALID'
-          });
+          handleSessionFailure(result || { code: 'SESSION_INVALID' });
         },
         function(error) {
           console.error('Session validation failed:', error);
 
-          // عطل الاتصال لا يعني انتهاء الجلسة.
-          // نحتفظ بالتوكن ولا نعرض بيانات المنتج.
+          // عطل الاتصال لا يعني انتهاء الجلسة: نحتفظ بالتوكن ولا نعرض بيانات.
           hide('initialLoading');
           hide('productCard');
           hide('productLoading');
@@ -754,16 +520,10 @@
     function handleRequestCode() {
       if (busy) return;
 
-      const email = normalizeEmail(
-        document.getElementById('emailInput').value
-      );
+      const email = normalizeEmail(document.getElementById('emailInput').value);
 
       if (!isValidEmail(email)) {
-        showMessage(
-          'loginMessage',
-          'اكتب بريدًا إلكترونيًا صحيحًا.',
-          'error'
-        );
+        showMessage('loginMessage', 'اكتب بريدًا إلكترونيًا صحيحًا.', 'error');
         return;
       }
 
@@ -772,55 +532,31 @@
       clearMessage('loginMessage');
       clearMessage('otpMessage');
 
-      setBusy(
-        true,
-        'requestCodeButton',
-        'جارٍ إرسال الكود...'
-      );
+      setBusy(true, 'requestCodeButton', 'جارٍ إرسال الكود...');
 
       callServer(
         'requestCode',
         [email],
         function(result) {
-          setBusy(
-            false,
-            'requestCodeButton',
-            'إرسال كود التحقق'
-          );
+          setBusy(false, 'requestCodeButton', 'إرسال كود التحقق');
 
           if (result && result.ok) {
             showOtpStep();
-
-            showMessage(
-              'otpMessage',
-              result.message,
-              'success'
-            );
-
+            showMessage('otpMessage', result.message, 'success');
             document.getElementById('otpInput').focus();
             return;
           }
 
-          const message = result && result.message
-            ? result.message
-            : 'تعذر إرسال كود التحقق. حاول مرة أخرى.';
-
-          showMessage('loginMessage', message, 'error');
+          showMessage(
+            'loginMessage',
+            result && result.message ? result.message : 'تعذر إرسال كود التحقق. حاول مرة أخرى.',
+            'error'
+          );
         },
         function(error) {
           console.error('Request OTP failed:', error);
-
-          setBusy(
-            false,
-            'requestCodeButton',
-            'إرسال كود التحقق'
-          );
-
-          showMessage(
-            'loginMessage',
-            'حدث خطأ أثناء الاتصال بالخادم. حاول مرة أخرى.',
-            'error'
-          );
+          setBusy(false, 'requestCodeButton', 'إرسال كود التحقق');
+          showMessage('loginMessage', 'حدث خطأ أثناء الاتصال بالخادم. حاول مرة أخرى.', 'error');
         }
       );
     }
@@ -828,51 +564,28 @@
     function handleVerifyCode() {
       if (busy) return;
 
-      const email = normalizeEmail(
-        document.getElementById('emailInput').value || currentEmail
-      );
-
-      const code = String(
-        document.getElementById('otpInput').value || ''
-      ).trim();
+      const email = normalizeEmail(document.getElementById('emailInput').value || currentEmail);
+      const code = String(document.getElementById('otpInput').value || '').trim();
 
       if (!isValidEmail(email)) {
-        showMessage(
-          'otpMessage',
-          'اكتب بريدًا إلكترونيًا صحيحًا.',
-          'error'
-        );
-
+        showMessage('otpMessage', 'اكتب بريدًا إلكترونيًا صحيحًا.', 'error');
         showEmailStep();
         return;
       }
 
       if (!/^\d{6}$/.test(code)) {
-        showMessage(
-          'otpMessage',
-          'أدخل كود التحقق المكوّن من 6 أرقام.',
-          'error'
-        );
+        showMessage('otpMessage', 'أدخل كود التحقق المكوّن من 6 أرقام.', 'error');
         return;
       }
 
       clearMessage('otpMessage');
-
-      setBusy(
-        true,
-        'verifyCodeButton',
-        'جارٍ التحقق...'
-      );
+      setBusy(true, 'verifyCodeButton', 'جارٍ التحقق...');
 
       callServer(
         'verifyCode',
         [email, code],
         function(result) {
-          setBusy(
-            false,
-            'verifyCodeButton',
-            'تأكيد وتسجيل الدخول'
-          );
+          setBusy(false, 'verifyCodeButton', 'تأكيد وتسجيل الدخول');
 
           if (result && result.ok && result.token && result.email) {
             try {
@@ -904,11 +617,7 @@
 
           showMessage('otpMessage', message, 'error');
 
-          if (
-            result &&
-            (result.code === 'NOT_AUTHORIZED' ||
-             result.code === 'ROLE_NOT_DEFINED')
-          ) {
+          if (result && (result.code === 'NOT_AUTHORIZED' || result.code === 'ROLE_NOT_DEFINED')) {
             clearLocalSession();
             showEmailStep();
             showMessage('loginMessage', message, 'error');
@@ -916,24 +625,14 @@
         },
         function(error) {
           console.error('Verify OTP failed:', error);
-
-          setBusy(
-            false,
-            'verifyCodeButton',
-            'تأكيد وتسجيل الدخول'
-          );
-
-          showMessage(
-            'otpMessage',
-            'تعذر الاتصال بالخادم للتحقق من الكود. حاول مرة أخرى.',
-            'error'
-          );
+          setBusy(false, 'verifyCodeButton', 'تأكيد وتسجيل الدخول');
+          showMessage('otpMessage', 'تعذر الاتصال بالخادم للتحقق من الكود. حاول مرة أخرى.', 'error');
         }
       );
     }
 
     /**
-     * طلب بيانات المنتج بالتوكن فقط.
+     * طلب بيانات المنتج بالتوكن فقط. الرد فيه الأسعار والمخزون معًا (طلب واحد).
      */
     function loadProduct() {
       if (!currentToken) {
@@ -958,9 +657,7 @@
             return;
           }
 
-          handleProductFailure(result || {
-            code: 'SERVER_ERROR'
-          });
+          handleProductFailure(result || { code: 'SERVER_ERROR' });
         },
         function(error) {
           console.error('Load product failed:', error);
@@ -981,15 +678,13 @@
     }
 
     /**
-     * عرض المنتج. الحقول القادمة من السيرفر هي المسموحة فقط،
-     * وكل حقل غير مسموح لا يُنشأ في الصفحة أصلًا.
+     * الحقول القادمة من السيرفر هي المسموحة فقط.
      * نستخدم textContent لمنع تفسير بيانات الشيت على أنها HTML.
      */
     function renderProduct(product) {
       clearProductView();
 
-      document.getElementById('productCodeTitle').textContent =
-        product.code || '—';
+      document.getElementById('productCodeTitle').textContent = product.code || '—';
 
       const container = document.getElementById('productFields');
       const fields = Array.isArray(product.fields) ? product.fields : [];
@@ -1003,13 +698,10 @@
         label.textContent = field.label || '';
 
         const value = document.createElement('div');
-        value.className = 'product-value' +
-          (field.kind === 'price' ? ' product-price' : '');
+        value.className = 'product-value' + (field.kind === 'price' ? ' product-price' : '');
 
         value.textContent =
-          field.value === '' ||
-          field.value === null ||
-          field.value === undefined
+          field.value === '' || field.value === null || field.value === undefined
             ? NOT_SPECIFIED_TEXT
             : String(field.value);
 
@@ -1020,257 +712,112 @@
 
       clearMessage('productMessage');
 
-      // المخزون من الـ ERP (للصلاحيات المسموحة فقط).
       if (product.canViewStock) {
-        loadStock(product.code);
+        renderStock(product.stock);
       }
     }
 
-    function clearProductView() {
-      resetStockView();
+    function formatAge(minutes) {
+      const m = Number(minutes) || 0;
 
-      document.getElementById('productCodeTitle').textContent = '—';
-      document.getElementById('productFields').replaceChildren();
-    }
-       function resetStockView() {
-      stockRequestId++;
-
-      if (stockPollTimer) {
-        window.clearTimeout(stockPollTimer);
-        stockPollTimer = null;
-      }
-
-      if (stockController) {
-        stockController.abort();
-        stockController = null;
-      }
-
-      hide('stockSection');
-      hide('stockLoading');
-      hide('stockResult');
-      clearMessage('stockMessage');
-      document.getElementById('stockBody').replaceChildren();
+      if (m < 60) return m + ' دقيقة';
+      if (m < 1440) return Math.floor(m / 60) + ' ساعة';
+      return Math.floor(m / 1440) + ' يوم';
     }
 
     function formatQuantity(value) {
       const n = Number(value);
 
-      return Number.isFinite(n)
+      return value !== null && value !== undefined && Number.isFinite(n)
         ? n.toLocaleString('en-US', { maximumFractionDigits: 3 })
-        : String(value);
+        : '—';
     }
 
-    function showStockMessage(code, message) {
-      const informational =
-        code === 'NOT_FOUND' || code === 'NO_STOCK' || code === 'NO_MATCH';
+    function renderStock(stock) {
+      if (!stock) return;
 
-      showMessage(
-        'stockMessage',
-        message || 'تعذر جلب المخزون حاليًا.',
-        informational ? 'info' : 'error'
-      );
-    }
-function formatEta(seconds) {
-  return seconds < 60 ? seconds + ' ثانية' : Math.ceil(seconds / 60) + ' دقيقة';
-}
+      show('stockSection');
 
-function updateQueueText(data) {
-  const el = document.getElementById('stockLoadingText');
-  if (!el) return;
+      if (stock.ok === false) {
+        showMessage('stockMessage', stock.message || 'تعذر جلب المخزون حاليًا.', 'error');
+        return;
+      }
 
-  if (data.state === 'running') {
-    el.textContent = 'جارٍ البحث عن المخزون الآن...';
-    return;
-  }
+      // اسم المنتج + آخر تحديث (أقدم تحديث بين المخازن).
+      if (stock.productName || stock.lastUpdate) {
+        document.getElementById('metaName').textContent = stock.productName || '';
 
-  if (data.position > 0) {
-    let text = 'أنت رقم ' + data.position + ' في الطابور';
-    if (data.etaSeconds > 0) text += ' (الوقت المتوقع تقريبًا: ' + formatEta(data.etaSeconds) + ')';
-    el.textContent = text;
-  }
-}
-    function renderStock(data) {
-      const rows = Array.isArray(data.rows) ? data.rows : [];
-      const first = rows[0] || {};
+        const updateEl = document.getElementById('metaUpdate');
+        updateEl.replaceChildren();
 
-      document.getElementById('stockProductName').textContent = first.productName || '';
-      document.getElementById('stockProductCode').textContent = first.productCode || '';
-      document.getElementById('stockTotal').textContent =
-        'إجمالي المخزون: ' + formatQuantity(data.totalStock);
+        if (stock.lastUpdate) {
+          updateEl.appendChild(document.createTextNode('آخر تحديث: '));
+          const time = document.createElement('bdi');
+          time.textContent = stock.lastUpdate;
+          updateEl.appendChild(time);
+        }
+
+        show('productMeta');
+      }
+
+      if (stock.stale) {
+        showMessage(
+          'staleMessage',
+          'تنبيه: بيانات المخزون قديمة (آخر تحديث منذ ' + formatAge(stock.ageMinutes) + ').',
+          'error'
+        );
+      }
+
+      const rows = Array.isArray(stock.rows) ? stock.rows : [];
+
+      if (rows.length === 0) {
+        showMessage('stockMessage', stock.message || 'غير متوفر في المخازن.', 'info');
+        return;
+      }
+
+      if (stock.partial) {
+        showMessage('stockMessage', 'بعض المخازن لم يتم تحديثها بعد، وقد لا تظهر هنا.', 'info');
+      }
 
       const body = document.getElementById('stockBody');
-      body.replaceChildren();
-
       const fragment = document.createDocumentFragment();
 
       rows.forEach(function(row) {
         const tr = document.createElement('tr');
 
+        const warehouse = document.createElement('td');
+        warehouse.className = 'stock-wh';
+        warehouse.textContent = row.warehouse || '—';
+
         const color = document.createElement('td');
         color.textContent = row.color || '—';
-
-        const warehouse = document.createElement('td');
-        warehouse.textContent = row.warehouseName || '—';
 
         const quantity = document.createElement('td');
         quantity.className = 'stock-qty';
         quantity.textContent = formatQuantity(row.quantity);
 
-        tr.appendChild(color);
         tr.appendChild(warehouse);
+        tr.appendChild(color);
         tr.appendChild(quantity);
         fragment.appendChild(tr);
       });
 
       body.appendChild(fragment);
-
-      if (Array.isArray(data.warnings) && data.warnings.length > 0) {
-        showMessage('stockMessage', 'تنبيه: قد تكون بعض بيانات المخزون غير مكتملة.', 'info');
-      }
-
       show('stockResult');
     }
 
-    function stockPost(path, body, signal) {
-      return fetch(STOCK_API_BASE + path, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(body),
-        signal: signal
-      }).then(function(response) {
-        return response.json().catch(function() {
-          throw new Error('استجابة سيرفر المخزون غير صالحة (HTTP ' + response.status + ').');
-        });
-      });
-    }
-
-    function loadStock(code) {
-      const requestId = ++stockRequestId;
-      const startedAt = Date.now();
-      let failures = 0;
-
-      show('stockSection');
-      show('stockLoading');
-      document.getElementById('stockLoadingText').textContent = 'جارٍ جلب المخزون من النظام...';
+    function clearProductView() {
+      hide('productMeta');
+      hide('stockSection');
       hide('stockResult');
       clearMessage('stockMessage');
+      clearMessage('staleMessage');
 
-      function isStale() {
-        return requestId !== stockRequestId;
-      }
-
-      function fail(errorCode, message) {
-        if (isStale()) return;
-        hide('stockLoading');
-        showStockMessage(errorCode, message);
-      }
-
-      function scheduleRetry(jobId, delay) {
-        if (isStale()) return;
-        if (stockPollTimer) window.clearTimeout(stockPollTimer);
-        stockPollTimer = window.setTimeout(function() {
-          stockPollTimer = null;
-          poll(jobId);
-        }, delay);
-      }
-
-      function poll(jobId) {
-        if (isStale()) return;
-
-        if (Date.now() - startedAt > STOCK_TIMEOUT_MS) {
-          fail('STOCK_ERROR', 'استغرق جلب المخزون وقتًا طويلًا. حاول مرة أخرى.');
-          return;
-        }
-
-        const controller = new AbortController();
-        stockController = controller;
-        const requestTimer = window.setTimeout(function() {
-          controller.abort();
-        }, STOCK_REQUEST_TIMEOUT_MS);
-
-        stockPost('/stock/result', {
-          token: currentToken,
-          jobId: jobId,
-          waitMs: STOCK_LONG_POLL_MS
-        }, controller.signal)
-          .then(function(data) {
-            if (isStale()) return;
-            failures = 0;
-
-            if (data && data.ok && data.done === false) {
-              updateQueueText(data);
-
-              // Current server returns waitTimeout only after the long-poll window.
-              // Reconnect immediately then; use a tiny compatibility delay only
-              // when talking to an older server that does not implement long polling.
-              if (data.waitTimeout) {
-                poll(jobId);
-              } else {
-                scheduleRetry(jobId, 500);
-              }
-              return;
-            }
-
-            hide('stockLoading');
-            if (data && data.ok) {
-              renderStock(data);
-              return;
-            }
-            showStockMessage(data && data.code, data && data.message);
-          })
-          .catch(function(error) {
-            if (isStale()) return;
-
-            failures++;
-            console.error('Stock result request failed:', error);
-
-            if (failures >= STOCK_MAX_FAILURES) {
-              fail('STOCK_ERROR', 'تعذر الاتصال بسيرفر المخزون. تأكد إنه شغّال.');
-              return;
-            }
-
-            // Backoff is used only after a failed network request, never between
-            // successful long-poll responses.
-            const retryDelay = Math.min(4000, STOCK_RETRY_BASE_MS * (2 ** (failures - 1)));
-            scheduleRetry(jobId, retryDelay);
-          })
-          .finally(function() {
-            window.clearTimeout(requestTimer);
-            if (stockController === controller) stockController = null;
-          });
-      }
-
-      const startController = new AbortController();
-      stockController = startController;
-      const startTimer = window.setTimeout(function() {
-        startController.abort();
-      }, STOCK_REQUEST_TIMEOUT_MS);
-
-      stockPost('/stock/start', {
-        token: currentToken,
-        code: code
-      }, startController.signal)
-        .then(function(data) {
-          if (isStale()) return;
-
-          if (data && data.ok && data.jobId) {
-            updateQueueText(data);
-            poll(data.jobId);
-            return;
-          }
-
-          hide('stockLoading');
-          showStockMessage(data && data.code, data && data.message);
-        })
-        .catch(function(error) {
-          if (isStale()) return;
-          console.error('Stock start failed:', error);
-          fail('STOCK_ERROR', 'تعذر الاتصال بسيرفر المخزون. تأكد إنه شغّال.');
-        })
-        .finally(function() {
-          window.clearTimeout(startTimer);
-          if (stockController === startController) stockController = null;
-        });
+      document.getElementById('metaName').textContent = '';
+      document.getElementById('metaUpdate').replaceChildren();
+      document.getElementById('stockBody').replaceChildren();
+      document.getElementById('productCodeTitle').textContent = '—';
+      document.getElementById('productFields').replaceChildren();
     }
 
     function handleSessionFailure(result) {
@@ -1280,21 +827,16 @@ function updateQueueText(data) {
       clearProductView();
 
       const code = result && result.code;
-
-      const message = result && result.message
-        ? result.message
-        : 'تعذر التحقق من الجلسة.';
+      const message = result && result.message ? result.message : 'تعذر التحقق من الجلسة.';
 
       if (code === 'SERVER_ERROR') {
-        // مشكلة مؤقتة في السيرفر أو الشيت:
-        // احتفظ بالتوكن ولا تعرض المنتج.
+        // مشكلة مؤقتة: احتفظ بالتوكن ولا تعرض المنتج.
         showLogin();
         showEmailStep();
         showMessage('loginMessage', message, 'error');
         return;
       }
 
-      // جلسة غير موجودة أو ملغاة أو بريد غير مصرح به أو صلاحية غير محددة.
       clearLocalSession();
       showLogin();
       showEmailStep();
@@ -1307,16 +849,9 @@ function updateQueueText(data) {
       clearProductView();
 
       const code = result && result.code;
+      const message = result && result.message ? result.message : 'تعذر تحميل بيانات المنتج.';
 
-      const message = result && result.message
-        ? result.message
-        : 'تعذر تحميل بيانات المنتج.';
-
-      if (
-        code === 'SESSION_INVALID' ||
-        code === 'NOT_AUTHORIZED' ||
-        code === 'ROLE_NOT_DEFINED'
-      ) {
+      if (code === 'SESSION_INVALID' || code === 'NOT_AUTHORIZED' || code === 'ROLE_NOT_DEFINED') {
         clearLocalSession();
         showLogin();
         showEmailStep();
@@ -1324,19 +859,9 @@ function updateQueueText(data) {
         return;
       }
 
-      if (
-        code === 'PRODUCT_INCOMPLETE' ||
-        code === 'PRODUCT_NOT_FOUND' ||
-        code === 'PRODUCT_DUPLICATE'
-      ) {
+      if (code === 'PRODUCT_INCOMPLETE' || code === 'PRODUCT_NOT_FOUND' || code === 'PRODUCT_DUPLICATE') {
         show('productCard');
-
-        showMessage(
-          'productMessage',
-          message,
-          'error'
-        );
-
+        showMessage('productMessage', message, 'error');
         return;
       }
 
@@ -1349,14 +874,11 @@ function updateQueueText(data) {
     function openScanner(event) {
       const button = event && event.currentTarget ? event.currentTarget : null;
 
-      // تأكيد للمستخدم إن الضغطة اتسجلت.
       if (button) {
         button.disabled = true;
         button.textContent = 'جارٍ فتح الاسكان...';
       }
 
-      // الاسكانر على نفس الدومين، فالتنقل عادي ومباشر.
-      // لو رجع المستخدم بزرار الرجوع، pageshow بيرجّع الأزرار.
       window.location.href = SCANNER_URL;
     }
 
@@ -1369,7 +891,6 @@ function updateQueueText(data) {
     }
 
     function enterApp() {
-      // مفيش منتج في الرابط: نعرض زرار "مسح منتج" بدل "جارٍ تحميل بيانات المنتج".
       if (!PRODUCT_ID) {
         showScanStart();
         return;
@@ -1388,7 +909,6 @@ function updateQueueText(data) {
 
       const tokenToRevoke = currentToken;
 
-      // إزالة التوكن من المتصفح وإخفاء المنتج فورًا.
       clearLocalSession();
       clearProductView();
       showLogin();
@@ -1420,23 +940,16 @@ function updateQueueText(data) {
       );
     }
 
-    /**
-     * حفظ التوكن فقط.
-     * لا يتم حفظ البريد الإلكتروني في localStorage.
-     */
+    // حفظ التوكن فقط (لا نحفظ البريد).
     function saveLocalSession(token) {
       localStorage.setItem(SESSION_KEY, token);
     }
 
     function getLocalSession() {
       try {
-        return {
-          token: localStorage.getItem(SESSION_KEY) || ''
-        };
+        return { token: localStorage.getItem(SESSION_KEY) || '' };
       } catch (error) {
-        return {
-          token: ''
-        };
+        return { token: '' };
       }
     }
 
@@ -1471,9 +984,7 @@ function updateQueueText(data) {
       show('loginCard');
       show('emailStep');
       hide('otpStep');
-
       clearMessage('otpMessage');
-
       document.getElementById('otpInput').value = '';
     }
 
@@ -1481,17 +992,11 @@ function updateQueueText(data) {
       show('loginCard');
       hide('emailStep');
       show('otpStep');
-
       clearMessage('loginMessage');
     }
 
-    function show(id) {
-      document.getElementById(id).classList.remove('hidden');
-    }
-
-    function hide(id) {
-      document.getElementById(id).classList.add('hidden');
-    }
+    function show(id) { document.getElementById(id).classList.remove('hidden'); }
+    function hide(id) { document.getElementById(id).classList.add('hidden'); }
 
     function showMessage(id, message, type) {
       const element = document.getElementById(id);

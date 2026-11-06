@@ -596,10 +596,13 @@
     // رابط سيرفر المخزون. للتجربة على نفس الجهاز: localhost. هيتغير لرابط الـ tunnel بعدين.
     // رابط سيرفر المخزون (من غير /stock في الآخر).
     const STOCK_API_BASE = 'https://specialties-cement-jewel-cheers.trycloudflare.com';
-    const STOCK_POLL_MS = 3000;               // نسأل عن النتيجة كل 3 ثواني
-    const STOCK_TIMEOUT_MS = 30 * 60 * 1000;          // أقصى انتظار كلي: 30 دقيقة
-    const STOCK_REQUEST_TIMEOUT_MS = 30000;   // مهلة كل طلب منفرد
-    const STOCK_MAX_FAILURES = 5;             // عدد انقطاعات الشبكة المتتالية المسموحة
+    // The server supports long polling up to 25 seconds. The browser request
+    // timeout is intentionally longer than the server-side long-poll window.
+    const STOCK_LONG_POLL_MS = 25000;
+    const STOCK_RETRY_BASE_MS = 500;
+    const STOCK_TIMEOUT_MS = 30 * 60 * 1000;
+    const STOCK_REQUEST_TIMEOUT_MS = STOCK_LONG_POLL_MS + 10000;
+    const STOCK_MAX_FAILURES = 5;
     let stockPollTimer = null;
     let stockController = null;
     let stockRequestId = 0;
@@ -1135,7 +1138,9 @@ function updateQueueText(data) {
         body: JSON.stringify(body),
         signal: signal
       }).then(function(response) {
-        return response.json();
+        return response.json().catch(function() {
+          throw new Error('استجابة سيرفر المخزون غير صالحة (HTTP ' + response.status + ').');
+        });
       });
     }
 
@@ -1156,9 +1161,17 @@ function updateQueueText(data) {
 
       function fail(errorCode, message) {
         if (isStale()) return;
-
         hide('stockLoading');
         showStockMessage(errorCode, message);
+      }
+
+      function scheduleRetry(jobId, delay) {
+        if (isStale()) return;
+        if (stockPollTimer) window.clearTimeout(stockPollTimer);
+        stockPollTimer = window.setTimeout(function() {
+          stockPollTimer = null;
+          poll(jobId);
+        }, delay);
       }
 
       function poll(jobId) {
@@ -1171,71 +1184,77 @@ function updateQueueText(data) {
 
         const controller = new AbortController();
         stockController = controller;
-
-        const timer = window.setTimeout(function() {
+        const requestTimer = window.setTimeout(function() {
           controller.abort();
         }, STOCK_REQUEST_TIMEOUT_MS);
 
-        stockPost('/stock/result', { token: currentToken, jobId: jobId }, controller.signal)
+        stockPost('/stock/result', {
+          token: currentToken,
+          jobId: jobId,
+          waitMs: STOCK_LONG_POLL_MS
+        }, controller.signal)
           .then(function(data) {
-            window.clearTimeout(timer);
-
             if (isStale()) return;
-
             failures = 0;
 
-             if (data && data.ok && data.done === false) {
-              updateQueueText(data);   // <== السطر الجديد
-              stockPollTimer = window.setTimeout(function() {
+            if (data && data.ok && data.done === false) {
+              updateQueueText(data);
+
+              // Current server returns waitTimeout only after the long-poll window.
+              // Reconnect immediately then; use a tiny compatibility delay only
+              // when talking to an older server that does not implement long polling.
+              if (data.waitTimeout) {
                 poll(jobId);
-              }, STOCK_POLL_MS);
+              } else {
+                scheduleRetry(jobId, 500);
+              }
               return;
             }
 
             hide('stockLoading');
-
             if (data && data.ok) {
               renderStock(data);
               return;
             }
-
             showStockMessage(data && data.code, data && data.message);
           })
           .catch(function(error) {
-            window.clearTimeout(timer);
-
             if (isStale()) return;
 
-            // انقطاع مؤقت في الشبكة (مثلًا ضعف إشارة الموبايل): نحاول تاني.
             failures++;
-            console.error('Stock poll failed:', error);
+            console.error('Stock result request failed:', error);
 
             if (failures >= STOCK_MAX_FAILURES) {
               fail('STOCK_ERROR', 'تعذر الاتصال بسيرفر المخزون. تأكد إنه شغّال.');
               return;
             }
 
-            stockPollTimer = window.setTimeout(function() {
-              poll(jobId);
-            }, STOCK_POLL_MS);
+            // Backoff is used only after a failed network request, never between
+            // successful long-poll responses.
+            const retryDelay = Math.min(4000, STOCK_RETRY_BASE_MS * (2 ** (failures - 1)));
+            scheduleRetry(jobId, retryDelay);
+          })
+          .finally(function() {
+            window.clearTimeout(requestTimer);
+            if (stockController === controller) stockController = null;
           });
       }
 
-      // 1) نبدأ الطلب (بيرجع فورًا بـ jobId).
       const startController = new AbortController();
       stockController = startController;
-
       const startTimer = window.setTimeout(function() {
         startController.abort();
       }, STOCK_REQUEST_TIMEOUT_MS);
 
-      stockPost('/stock/start', { token: currentToken, code: code }, startController.signal)
+      stockPost('/stock/start', {
+        token: currentToken,
+        code: code
+      }, startController.signal)
         .then(function(data) {
-          window.clearTimeout(startTimer);
-
           if (isStale()) return;
 
           if (data && data.ok && data.jobId) {
+            updateQueueText(data);
             poll(data.jobId);
             return;
           }
@@ -1244,14 +1263,16 @@ function updateQueueText(data) {
           showStockMessage(data && data.code, data && data.message);
         })
         .catch(function(error) {
-          window.clearTimeout(startTimer);
-
           if (isStale()) return;
-
           console.error('Stock start failed:', error);
           fail('STOCK_ERROR', 'تعذر الاتصال بسيرفر المخزون. تأكد إنه شغّال.');
+        })
+        .finally(function() {
+          window.clearTimeout(startTimer);
+          if (stockController === startController) stockController = null;
         });
     }
+
     function handleSessionFailure(result) {
       hide('initialLoading');
       hide('productLoading');

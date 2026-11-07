@@ -172,7 +172,7 @@
       font-family: Arial, sans-serif;
     }
 
-    /* اسم المنتج + آخر تحديث */
+    /* اسم المنتج */
     .product-meta { margin-bottom: 8px; }
 
     .meta-name {
@@ -182,30 +182,86 @@
       overflow-wrap: anywhere;
     }
 
-    .meta-update {
-      color: var(--muted);
-      font-size: 13px;
-      margin: 4px 0 12px;
+    /* الأسعار: جنب بعض في صف واحد بخط أصغر */
+    #productFields {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 8px;
+      margin: 8px 0 14px;
     }
 
-    .meta-update bdi { direction: ltr; unicode-bidi: isolate; font-family: Arial, sans-serif; }
+    .product-field {
+      flex: 1 1 0;
+      min-width: 0;
+      padding: 10px 6px;
+      text-align: center;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
 
-    .product-field { padding: 16px 0; border-bottom: 1px solid var(--border); }
-    #productFields .product-field:last-child { border-bottom: 0; }
-
-    .product-label { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+    .product-label {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.5;
+      margin-bottom: 6px;
+    }
 
     .product-value {
-      font-size: 16px;
-      line-height: 1.9;
+      font-size: 14px;
+      line-height: 1.5;
       font-weight: 600;
       overflow-wrap: anywhere;
       white-space: pre-wrap;
     }
 
-    .product-price { color: var(--success); font-size: 23px; font-weight: 800; }
+    .product-price { color: var(--success); font-size: 16px; font-weight: 800; }
+
+    @media (max-width: 480px) {
+      #productFields { gap: 6px; }
+      .product-field { padding: 8px 4px; border-radius: 10px; }
+      .product-label { font-size: 10px; }
+      .product-value { font-size: 12px; }
+      .product-price { font-size: 14px; }
+    }
 
     .stock-section { padding: 16px 0 4px; border-top: 1px solid var(--border); margin-top: 4px; }
+
+    /* فلاتر المخزون */
+    .stock-filters {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 8px 0 12px;
+    }
+
+    .filter-box label {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .filter-box select {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      background-color: #fff;
+      padding: 10px 12px;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      outline: none;
+      cursor: pointer;
+      transition: border-color .2s, box-shadow .2s;
+    }
+
+    .filter-box select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+    }
 
     .stock-table-wrap {
       max-height: 60vh;
@@ -234,7 +290,18 @@
       overflow-wrap: anywhere;
     }
 
-    .stock-table tr:last-child td { border-bottom: 0; }
+    .stock-table tbody tr:last-child td { border-bottom: 0; }
+
+    /* صف الإجماليات */
+    .stock-table tfoot td {
+      position: sticky;
+      bottom: 0;
+      background: #eff6ff;
+      border-top: 2px solid #bfdbfe;
+      border-bottom: 0;
+      font-weight: 800;
+      color: #1e3a8a;
+    }
 
     .stock-name { font-weight: 700; }
     .stock-wh { direction: ltr; text-align: right; font-family: Arial, sans-serif; font-weight: 700; }
@@ -243,6 +310,7 @@
     @media (max-width: 480px) {
       .page { padding: 20px 12px; }
       .card { padding: 21px 17px; }
+      .stock-table th, .stock-table td { padding: 8px 6px; }
     }
   </style>
 </head>
@@ -296,19 +364,31 @@
         <div id="metaName" class="meta-name"></div>
       </div>
 
-      <!-- الأسعار حسب الصلاحية -->
+      <!-- الأسعار حسب الصلاحية (جنب بعض) -->
       <div id="productFields"></div>
 
-      <!-- المخزون: صف لكل مخزن -->
+      <!-- المخزون -->
       <div id="stockSection" class="stock-section hidden">
         <div class="product-label">المخزون</div>
 
         <div id="stockMessage" class="message hidden" role="status"></div>
 
+        <div id="stockFilters" class="stock-filters hidden">
+          <div class="filter-box">
+            <label for="warehouseFilter">المخزن</label>
+            <select id="warehouseFilter"></select>
+          </div>
+          <div class="filter-box">
+            <label for="colorFilter">اللون</label>
+            <select id="colorFilter"></select>
+          </div>
+        </div>
+
         <div id="stockResult" class="stock-table-wrap hidden">
           <table class="stock-table">
             <thead id="stockHead"></thead>
             <tbody id="stockBody"></tbody>
+            <tfoot id="stockFoot"></tfoot>
           </table>
         </div>
       </div>
@@ -341,9 +421,14 @@
     const SESSION_KEY = 'raif_product_session_v1';
     const PRODUCT_ID = (new URLSearchParams(window.location.search).get('id') || '').trim();
     const NOT_SPECIFIED_TEXT = 'غير محدد';
+    const FILTER_ALL = '__all__';
+    const NO_COLOR_LABEL = 'بدون لون';
     let currentEmail = '';
     let currentToken = '';
     let busy = false;
+
+    // حالة جدول المخزون الحالي (الفلترة كلها في المتصفح).
+    let stockState = { rows: [], split: false };
 
     /**
      * يرسل الطلب للـ API. نستخدم text/plain عشان المتصفح ما يعملش طلب preflight.
@@ -379,6 +464,9 @@
     document.getElementById('scanAnotherButton').addEventListener('click', openScanner);
     document.getElementById('startScanButton').addEventListener('click', openScanner);
     document.getElementById('scanLogoutButton').addEventListener('click', handleLogout);
+
+    document.getElementById('warehouseFilter').addEventListener('change', applyStockFilters);
+    document.getElementById('colorFilter').addEventListener('change', applyStockFilters);
 
     // لو الصفحة رجعت من الكاش بزرار الرجوع، نرجّع أزرار المسح لحالتها.
     window.addEventListener('pageshow', function(event) {
@@ -607,11 +695,21 @@
         : '—';
     }
 
-    function addCell(tr, text, className, tag) {
+    function addCell(tr, text, className, tag, colSpan) {
       const cell = document.createElement(tag || 'td');
       if (className) cell.className = className;
+      if (colSpan) cell.colSpan = colSpan;
       cell.textContent = text;
       tr.appendChild(cell);
+    }
+
+    function colorKey(color) {
+      return String(color || '').trim().toLowerCase();
+    }
+
+    function colorLabel(color) {
+      const value = String(color || '').trim();
+      return value || NO_COLOR_LABEL;
     }
 
     function renderStock(stock) {
@@ -636,17 +734,110 @@
         return;
       }
 
-      const split = stock.hasSplit === true;
+      stockState = { rows: rows, split: stock.hasSplit === true };
 
+      // رؤوس الجدول (ثابتة طول ما المنتج ظاهر).
       const head = document.getElementById('stockHead');
       head.replaceChildren();
 
       const headRow = document.createElement('tr');
-      (split ? ['المخزن', 'اللون', 'قطاعي', 'تجاري', 'الإجمالي'] : ['المخزن', 'اللون', 'الكمية'])
+      (stockState.split ? ['المخزن', 'اللون', 'قطاعي', 'تجاري', 'الإجمالي'] : ['المخزن', 'اللون', 'الكمية'])
         .forEach(function(label) { addCell(headRow, label, '', 'th'); });
       head.appendChild(headRow);
 
+      // الفلاتر تبدأ على "الكل".
+      document.getElementById('warehouseFilter').value = FILTER_ALL;
+      document.getElementById('colorFilter').value = FILTER_ALL;
+
+      applyStockFilters();
+
+      show('stockFilters');
+      show('stockResult');
+    }
+
+    function fillSelect(select, items, selected, allLabel) {
+      select.replaceChildren();
+
+      const all = document.createElement('option');
+      all.value = FILTER_ALL;
+      all.textContent = allLabel;
+      select.appendChild(all);
+
+      items.forEach(function(item) {
+        const option = document.createElement('option');
+        option.value = item.value;
+        option.textContent = item.label;
+        select.appendChild(option);
+      });
+
+      const exists = selected === FILTER_ALL || items.some(function(item) { return item.value === selected; });
+      select.value = exists ? selected : FILTER_ALL;
+    }
+
+    /**
+     * يطبق الفلاتر على الصفوف المخزنة في المتصفح:
+     * - قائمة المخازن بتعرض بس المخازن اللي فيها اللون المختار.
+     * - قائمة الألوان بتعرض بس الألوان اللي في المخزن المختار.
+     * - الجدول والإجماليات بيتحدثوا حسب الاختيار.
+     */
+    function applyStockFilters() {
+      const whSelect = document.getElementById('warehouseFilter');
+      const colorSelect = document.getElementById('colorFilter');
+
+      let wh = whSelect.value || FILTER_ALL;
+      let color = colorSelect.value || FILTER_ALL;
+
+      const rows = stockState.rows;
+
+      const warehouses = [];
+      const colors = [];
+      const seenWh = {};
+      const seenColor = {};
+
+      rows.forEach(function(row) {
+        const key = colorKey(row.color);
+
+        if (color === FILTER_ALL || key === color) {
+          if (!seenWh[row.warehouse]) {
+            seenWh[row.warehouse] = true;
+            warehouses.push({ value: row.warehouse, label: row.warehouse || '—' });
+          }
+        }
+
+        if (wh === FILTER_ALL || row.warehouse === wh) {
+          if (!seenColor[key]) {
+            seenColor[key] = true;
+            colors.push({ value: key, label: colorLabel(row.color) });
+          }
+        }
+      });
+
+      fillSelect(whSelect, warehouses, wh, 'كل المخازن');
+      fillSelect(colorSelect, colors, color, 'كل الألوان');
+
+      wh = whSelect.value;
+      color = colorSelect.value;
+
+      const visible = rows.filter(function(row) {
+        return (wh === FILTER_ALL || row.warehouse === wh) &&
+          (color === FILTER_ALL || colorKey(row.color) === color);
+      });
+
+      renderStockRows(visible);
+    }
+
+    function renderStockRows(rows) {
+      const split = stockState.split;
       const body = document.getElementById('stockBody');
+      const foot = document.getElementById('stockFoot');
+
+      body.replaceChildren();
+      foot.replaceChildren();
+
+      let sumRetail = 0;
+      let sumCommercial = 0;
+      let sumTotal = 0;
+
       const fragment = document.createDocumentFragment();
 
       rows.forEach(function(row) {
@@ -657,30 +848,55 @@
 
         if (split) {
           const isSplitRow = row.total !== null && row.total !== undefined;
+          const total = isSplitRow ? row.total : row.quantity;
 
           addCell(tr, isSplitRow ? formatQuantity(row.retail) : '—', 'stock-qty');
           addCell(tr, isSplitRow ? formatQuantity(row.commercial) : '—', 'stock-qty');
-          addCell(tr, formatQuantity(isSplitRow ? row.total : row.quantity), 'stock-qty');
+          addCell(tr, formatQuantity(total), 'stock-qty');
+
+          sumRetail += Number(row.retail) || 0;
+          sumCommercial += Number(row.commercial) || 0;
+          sumTotal += Number(total) || 0;
         } else {
           addCell(tr, formatQuantity(row.quantity), 'stock-qty');
+          sumTotal += Number(row.quantity) || 0;
         }
 
         fragment.appendChild(tr);
       });
 
       body.appendChild(fragment);
-      show('stockResult');
+
+      // صف الإجماليات (حسب الصفوف الظاهرة بعد الفلتر).
+      const totalRow = document.createElement('tr');
+      addCell(totalRow, 'الإجمالي', '', 'td', 2);
+
+      if (split) {
+        addCell(totalRow, formatQuantity(sumRetail), 'stock-qty');
+        addCell(totalRow, formatQuantity(sumCommercial), 'stock-qty');
+        addCell(totalRow, formatQuantity(sumTotal), 'stock-qty');
+      } else {
+        addCell(totalRow, formatQuantity(sumTotal), 'stock-qty');
+      }
+
+      foot.appendChild(totalRow);
     }
 
     function clearProductView() {
       hide('productMeta');
       hide('stockSection');
       hide('stockResult');
+      hide('stockFilters');
       clearMessage('stockMessage');
+
+      stockState = { rows: [], split: false };
 
       document.getElementById('metaName').textContent = '';
       document.getElementById('stockHead').replaceChildren();
       document.getElementById('stockBody').replaceChildren();
+      document.getElementById('stockFoot').replaceChildren();
+      document.getElementById('warehouseFilter').replaceChildren();
+      document.getElementById('colorFilter').replaceChildren();
       document.getElementById('productCodeTitle').textContent = '—';
       document.getElementById('productFields').replaceChildren();
     }

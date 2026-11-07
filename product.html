@@ -428,7 +428,7 @@
     let busy = false;
 
     // حالة جدول المخزون الحالي (الفلترة كلها في المتصفح).
-    let stockState = { rows: [], split: false };
+    let stockState = { rows: [], split: false, wholesale: false };
 
     /**
      * يرسل الطلب للـ API. نستخدم text/plain عشان المتصفح ما يعملش طلب preflight.
@@ -734,14 +734,22 @@
         return;
       }
 
-      stockState = { rows: rows, split: stock.hasSplit === true };
+      stockState = {
+        rows: rows,
+        split: stock.hasSplit === true,
+        wholesale: stock.hasWholesale === true
+      };
 
       // رؤوس الجدول (ثابتة طول ما المنتج ظاهر).
       const head = document.getElementById('stockHead');
       head.replaceChildren();
 
       const headRow = document.createElement('tr');
-      (stockState.split ? ['المخزن', 'اللون', 'قطاعي', 'تجاري', 'الإجمالي'] : ['المخزن', 'اللون', 'الكمية'])
+      (stockState.split
+        ? (stockState.wholesale
+            ? ['المخزن', 'اللون', 'قطاعي', 'تجاري', 'الجملة', 'الإجمالي']
+            : ['المخزن', 'اللون', 'قطاعي', 'تجاري', 'الإجمالي'])
+        : ['المخزن', 'اللون', 'الكمية'])
         .forEach(function(label) { addCell(headRow, label, '', 'th'); });
       head.appendChild(headRow);
 
@@ -836,7 +844,9 @@
 
       let sumRetail = 0;
       let sumCommercial = 0;
+      let sumWholesale = 0;
       let sumTotal = 0;
+      const showWholesale = stockState.wholesale;
 
       const fragment = document.createDocumentFragment();
 
@@ -852,10 +862,16 @@
 
           addCell(tr, isSplitRow ? formatQuantity(row.retail) : '—', 'stock-qty');
           addCell(tr, isSplitRow ? formatQuantity(row.commercial) : '—', 'stock-qty');
+
+          if (showWholesale) {
+            addCell(tr, formatQuantity(row.wholesale), 'stock-qty');
+          }
+
           addCell(tr, formatQuantity(total), 'stock-qty');
 
           sumRetail += Number(row.retail) || 0;
           sumCommercial += Number(row.commercial) || 0;
+          sumWholesale += Number(row.wholesale) || 0;
           sumTotal += Number(total) || 0;
         } else {
           addCell(tr, formatQuantity(row.quantity), 'stock-qty');
@@ -874,6 +890,11 @@
       if (split) {
         addCell(totalRow, formatQuantity(sumRetail), 'stock-qty');
         addCell(totalRow, formatQuantity(sumCommercial), 'stock-qty');
+
+        if (showWholesale) {
+          addCell(totalRow, formatQuantity(sumWholesale), 'stock-qty');
+        }
+
         addCell(totalRow, formatQuantity(sumTotal), 'stock-qty');
       } else {
         addCell(totalRow, formatQuantity(sumTotal), 'stock-qty');
@@ -889,7 +910,7 @@
       hide('stockFilters');
       clearMessage('stockMessage');
 
-      stockState = { rows: [], split: false };
+      stockState = { rows: [], split: false, wholesale: false };
 
       document.getElementById('metaName').textContent = '';
       document.getElementById('stockHead').replaceChildren();

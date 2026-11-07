@@ -257,6 +257,7 @@
 
     .stock-table tr:last-child td { border-bottom: 0; }
 
+    .stock-name { font-weight: 700; }
     .stock-wh { direction: ltr; text-align: right; font-family: Arial, sans-serif; font-weight: 700; }
     .stock-qty { direction: ltr; text-align: right; font-weight: 700; white-space: nowrap; }
 
@@ -341,11 +342,9 @@
 
       <div id="productMessage" class="message hidden" role="status"></div>
 
-      <!-- اسم المنتج ثم آخر تحديث للمخزون (للصلاحيات المسموحة فقط) -->
+      <!-- اسم المنتج (للصلاحيات اللي بتشوف مخزون) -->
       <div id="productMeta" class="product-meta hidden">
         <div id="metaName" class="meta-name"></div>
-        <div id="metaUpdate" class="meta-update"></div>
-        <div id="staleMessage" class="message hidden" role="status"></div>
       </div>
 
       <!-- الأسعار حسب الصلاحية -->
@@ -359,13 +358,7 @@
 
         <div id="stockResult" class="stock-table-wrap hidden">
           <table class="stock-table">
-            <thead>
-              <tr>
-                <th>المخزن</th>
-                <th>اللون</th>
-                <th>الكمية</th>
-              </tr>
-            </thead>
+            <thead id="stockHead"></thead>
             <tbody id="stockBody"></tbody>
           </table>
         </div>
@@ -717,20 +710,19 @@
       }
     }
 
-    function formatAge(minutes) {
-      const m = Number(minutes) || 0;
-
-      if (m < 60) return m + ' دقيقة';
-      if (m < 1440) return Math.floor(m / 60) + ' ساعة';
-      return Math.floor(m / 1440) + ' يوم';
-    }
-
     function formatQuantity(value) {
       const n = Number(value);
 
       return value !== null && value !== undefined && Number.isFinite(n)
         ? n.toLocaleString('en-US', { maximumFractionDigits: 3 })
         : '—';
+    }
+
+    function addCell(tr, text, className, tag) {
+      const cell = document.createElement(tag || 'td');
+      if (className) cell.className = className;
+      cell.textContent = text;
+      tr.appendChild(cell);
     }
 
     function renderStock(stock) {
@@ -743,29 +735,9 @@
         return;
       }
 
-      // اسم المنتج + آخر تحديث (أقدم تحديث بين المخازن).
-      if (stock.productName || stock.lastUpdate) {
-        document.getElementById('metaName').textContent = stock.productName || '';
-
-        const updateEl = document.getElementById('metaUpdate');
-        updateEl.replaceChildren();
-
-        if (stock.lastUpdate) {
-          updateEl.appendChild(document.createTextNode('آخر تحديث: '));
-          const time = document.createElement('bdi');
-          time.textContent = stock.lastUpdate;
-          updateEl.appendChild(time);
-        }
-
+      if (stock.productName) {
+        document.getElementById('metaName').textContent = stock.productName;
         show('productMeta');
-      }
-
-      if (stock.stale) {
-        showMessage(
-          'staleMessage',
-          'تنبيه: بيانات المخزون قديمة (آخر تحديث منذ ' + formatAge(stock.ageMinutes) + ').',
-          'error'
-        );
       }
 
       const rows = Array.isArray(stock.rows) ? stock.rows : [];
@@ -775,9 +747,15 @@
         return;
       }
 
-      if (stock.partial) {
-        showMessage('stockMessage', 'بعض المخازن لم يتم تحديثها بعد، وقد لا تظهر هنا.', 'info');
-      }
+      const split = stock.hasSplit === true;
+
+      const head = document.getElementById('stockHead');
+      head.replaceChildren();
+
+      const headRow = document.createElement('tr');
+      (split ? ['المخزن', 'اللون', 'قطاعي', 'تجاري', 'الإجمالي'] : ['المخزن', 'اللون', 'الكمية'])
+        .forEach(function(label) { addCell(headRow, label, '', 'th'); });
+      head.appendChild(headRow);
 
       const body = document.getElementById('stockBody');
       const fragment = document.createDocumentFragment();
@@ -785,20 +763,19 @@
       rows.forEach(function(row) {
         const tr = document.createElement('tr');
 
-        const warehouse = document.createElement('td');
-        warehouse.className = 'stock-wh';
-        warehouse.textContent = row.warehouse || '—';
+        addCell(tr, row.warehouse || '—', 'stock-name');
+        addCell(tr, row.color || '—');
 
-        const color = document.createElement('td');
-        color.textContent = row.color || '—';
+        if (split) {
+          const isSplitRow = row.total !== null && row.total !== undefined;
 
-        const quantity = document.createElement('td');
-        quantity.className = 'stock-qty';
-        quantity.textContent = formatQuantity(row.quantity);
+          addCell(tr, isSplitRow ? formatQuantity(row.retail) : '—', 'stock-qty');
+          addCell(tr, isSplitRow ? formatQuantity(row.commercial) : '—', 'stock-qty');
+          addCell(tr, formatQuantity(isSplitRow ? row.total : row.quantity), 'stock-qty');
+        } else {
+          addCell(tr, formatQuantity(row.quantity), 'stock-qty');
+        }
 
-        tr.appendChild(warehouse);
-        tr.appendChild(color);
-        tr.appendChild(quantity);
         fragment.appendChild(tr);
       });
 
@@ -811,10 +788,9 @@
       hide('stockSection');
       hide('stockResult');
       clearMessage('stockMessage');
-      clearMessage('staleMessage');
 
       document.getElementById('metaName').textContent = '';
-      document.getElementById('metaUpdate').replaceChildren();
+      document.getElementById('stockHead').replaceChildren();
       document.getElementById('stockBody').replaceChildren();
       document.getElementById('productCodeTitle').textContent = '—';
       document.getElementById('productFields').replaceChildren();

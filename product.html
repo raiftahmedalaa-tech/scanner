@@ -90,14 +90,6 @@
       box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
     }
 
-    .otp-input {
-      direction: ltr;
-      text-align: center;
-      letter-spacing: 8px;
-      font-size: 23px;
-      font-weight: 800;
-    }
-
     button {
       width: 100%;
       min-height: 48px;
@@ -124,19 +116,6 @@
     }
 
     .logout-button:hover { background: #fef2f2; }
-
-    .text-button {
-      display: block;
-      width: auto;
-      min-height: auto;
-      background: transparent;
-      color: var(--primary);
-      padding: 12px 4px 0;
-      margin: 0 auto;
-      font-size: 14px;
-    }
-
-    .text-button:hover { background: transparent; text-decoration: underline; }
 
     .message {
       border-radius: 12px;
@@ -280,7 +259,7 @@
       <div id="emailStep">
         <h2>تسجيل الدخول</h2>
         <p class="description">
-          أدخل البريد الإلكتروني المصرح به, سنرسل لك كود تحقق لإكمال تسجيل الدخول.
+          أدخل البريد الإلكتروني المصرح به لتسجيل الدخول.
         </p>
 
         <div id="loginMessage" class="message hidden" role="status"></div>
@@ -291,38 +270,8 @@
             <input id="emailInput" type="email" autocomplete="email" placeholder="name@example.com" required>
           </div>
 
-          <button id="requestCodeButton" type="submit">إرسال كود التحقق</button>
+          <button id="loginButton" type="submit">دخول</button>
         </form>
-      </div>
-
-      <div id="otpStep" class="hidden">
-        <h2>تأكيد البريد الإلكتروني</h2>
-        <p class="description">
-          أدخل كود التحقق المكوّن من 6 أرقام الذي تم إرساله إلى بريدك الإلكتروني.
-        </p>
-
-        <div id="otpMessage" class="message hidden" role="status"></div>
-
-        <form id="otpForm">
-          <div class="field">
-            <label for="otpInput">كود التحقق</label>
-            <input
-              id="otpInput"
-              class="otp-input"
-              type="text"
-              inputmode="numeric"
-              autocomplete="one-time-code"
-              maxlength="6"
-              pattern="[0-9]{6}"
-              placeholder="••••••"
-              required
-            >
-          </div>
-
-          <button id="verifyCodeButton" type="submit">تأكيد وتسجيل الدخول</button>
-        </form>
-
-        <button id="backToEmailButton" class="text-button" type="button">تغيير البريد الإلكتروني</button>
       </div>
     </section>
 
@@ -423,15 +372,9 @@
 
     document.getElementById('emailForm').addEventListener('submit', function(event) {
       event.preventDefault();
-      handleRequestCode();
+      handleLogin();
     });
 
-    document.getElementById('otpForm').addEventListener('submit', function(event) {
-      event.preventDefault();
-      handleVerifyCode();
-    });
-
-    document.getElementById('backToEmailButton').addEventListener('click', function() { showEmailStep(); });
     document.getElementById('logoutButton').addEventListener('click', handleLogout);
     document.getElementById('scanAnotherButton').addEventListener('click', openScanner);
     document.getElementById('startScanButton').addEventListener('click', openScanner);
@@ -510,7 +453,10 @@
       );
     }
 
-    function handleRequestCode() {
+    /**
+     * تسجيل الدخول بالبريد فقط: لو البريد مصرح في شيت Access يتم إنشاء الجلسة مباشرة.
+     */
+    function handleLogin() {
       if (busy) return;
 
       const email = normalizeEmail(document.getElementById('emailInput').value);
@@ -520,65 +466,14 @@
         return;
       }
 
-      currentEmail = email;
-
       clearMessage('loginMessage');
-      clearMessage('otpMessage');
-
-      setBusy(true, 'requestCodeButton', 'جارٍ إرسال الكود...');
+      setBusy(true, 'loginButton', 'جارٍ الدخول...');
 
       callServer(
-        'requestCode',
+        'login',
         [email],
         function(result) {
-          setBusy(false, 'requestCodeButton', 'إرسال كود التحقق');
-
-          if (result && result.ok) {
-            showOtpStep();
-            showMessage('otpMessage', result.message, 'success');
-            document.getElementById('otpInput').focus();
-            return;
-          }
-
-          showMessage(
-            'loginMessage',
-            result && result.message ? result.message : 'تعذر إرسال كود التحقق. حاول مرة أخرى.',
-            'error'
-          );
-        },
-        function(error) {
-          console.error('Request OTP failed:', error);
-          setBusy(false, 'requestCodeButton', 'إرسال كود التحقق');
-          showMessage('loginMessage', 'حدث خطأ أثناء الاتصال بالخادم. حاول مرة أخرى.', 'error');
-        }
-      );
-    }
-
-    function handleVerifyCode() {
-      if (busy) return;
-
-      const email = normalizeEmail(document.getElementById('emailInput').value || currentEmail);
-      const code = String(document.getElementById('otpInput').value || '').trim();
-
-      if (!isValidEmail(email)) {
-        showMessage('otpMessage', 'اكتب بريدًا إلكترونيًا صحيحًا.', 'error');
-        showEmailStep();
-        return;
-      }
-
-      if (!/^\d{6}$/.test(code)) {
-        showMessage('otpMessage', 'أدخل كود التحقق المكوّن من 6 أرقام.', 'error');
-        return;
-      }
-
-      clearMessage('otpMessage');
-      setBusy(true, 'verifyCodeButton', 'جارٍ التحقق...');
-
-      callServer(
-        'verifyCode',
-        [email, code],
-        function(result) {
-          setBusy(false, 'verifyCodeButton', 'تأكيد وتسجيل الدخول');
+          setBusy(false, 'loginButton', 'دخول');
 
           if (result && result.ok && result.token && result.email) {
             try {
@@ -604,22 +499,16 @@
             return;
           }
 
-          const message = result && result.message
-            ? result.message
-            : 'تعذر التحقق من الكود. حاول مرة أخرى.';
-
-          showMessage('otpMessage', message, 'error');
-
-          if (result && (result.code === 'NOT_AUTHORIZED' || result.code === 'ROLE_NOT_DEFINED')) {
-            clearLocalSession();
-            showEmailStep();
-            showMessage('loginMessage', message, 'error');
-          }
+          showMessage(
+            'loginMessage',
+            result && result.message ? result.message : 'تعذر تسجيل الدخول. حاول مرة أخرى.',
+            'error'
+          );
         },
         function(error) {
-          console.error('Verify OTP failed:', error);
-          setBusy(false, 'verifyCodeButton', 'تأكيد وتسجيل الدخول');
-          showMessage('otpMessage', 'تعذر الاتصال بالخادم للتحقق من الكود. حاول مرة أخرى.', 'error');
+          console.error('Login failed:', error);
+          setBusy(false, 'loginButton', 'دخول');
+          showMessage('loginMessage', 'حدث خطأ أثناء الاتصال بالخادم. حاول مرة أخرى.', 'error');
         }
       );
     }
@@ -890,7 +779,6 @@
       showLogin();
       showEmailStep();
       clearMessage('loginMessage');
-      clearMessage('otpMessage');
 
       if (!tokenToRevoke) {
         goToMainPage();
@@ -959,16 +847,6 @@
     function showEmailStep() {
       show('loginCard');
       show('emailStep');
-      hide('otpStep');
-      clearMessage('otpMessage');
-      document.getElementById('otpInput').value = '';
-    }
-
-    function showOtpStep() {
-      show('loginCard');
-      hide('emailStep');
-      show('otpStep');
-      clearMessage('loginMessage');
     }
 
     function show(id) { document.getElementById(id).classList.remove('hidden'); }
@@ -998,8 +876,6 @@
         button.disabled = isBusy;
         button.textContent = buttonText;
       }
-
-      document.getElementById('backToEmailButton').disabled = isBusy;
     }
 
     function normalizeEmail(email) {

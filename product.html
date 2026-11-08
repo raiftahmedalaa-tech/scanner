@@ -694,6 +694,11 @@
 
       clearMessage('productMessage');
 
+      // قياس مؤقت: افتح الرابط بـ &debug=1 عشان يظهر توقيت السيرفر. امسحه بعد القياس.
+      if (new URLSearchParams(window.location.search).get('debug') === '1' && product.timing) {
+        showMessage('productMessage', 'التوقيت (ms): ' + product.timing.join(' | '), 'info');
+      }
+
       if (product.canViewStock) {
         renderStock(product.stock);
       }

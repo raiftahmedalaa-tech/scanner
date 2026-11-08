@@ -314,7 +314,6 @@
 
     .stock-name { font-weight: 700; max-width: 120px; }
     .stock-color { max-width: 90px; }
-    .stock-wh { direction: ltr; text-align: right; font-family: Arial, sans-serif; font-weight: 700; }
     .stock-qty { direction: ltr; text-align: right; font-weight: 700; white-space: nowrap; }
 
     @media (max-width: 480px) {
@@ -435,7 +434,6 @@
     const NOT_SPECIFIED_TEXT = 'غير محدد';
     const FILTER_ALL = '__all__';
     const NO_COLOR_LABEL = 'بدون لون';
-    let currentEmail = '';
     let currentToken = '';
     let busy = false;
 
@@ -505,7 +503,6 @@
       }
 
       currentToken = saved.token;
-      currentEmail = '';
 
       if (PRODUCT_ID) {
         hide('loginCard');
@@ -525,8 +522,7 @@
         function(result) {
           hide('initialLoading');
 
-          if (result && result.ok && result.email) {
-            currentEmail = result.email;
+          if (result && result.ok) {
             enterApp();
             return;
           }
@@ -575,7 +571,7 @@
         function(result) {
           setBusy(false, 'loginButton', 'دخول');
 
-          if (result && result.ok && result.token && result.email) {
+          if (result && result.ok && result.token) {
             try {
               saveLocalSession(result.token);
             } catch (error) {
@@ -593,7 +589,6 @@
             }
 
             currentToken = result.token;
-            currentEmail = result.email;
 
             enterApp();
             return;
@@ -693,11 +688,6 @@
       });
 
       clearMessage('productMessage');
-
-      // قياس مؤقت: افتح الرابط بـ &debug=1 عشان يظهر توقيت السيرفر. امسحه بعد القياس.
-      if (new URLSearchParams(window.location.search).get('debug') === '1' && product.timing) {
-        showMessage('productMessage', 'التوقيت (ms): ' + product.timing.join(' | '), 'info');
-      }
 
       if (product.canViewStock) {
         renderStock(product.stock);
@@ -978,7 +968,7 @@
         return;
       }
 
-      if (code === 'PRODUCT_INCOMPLETE' || code === 'PRODUCT_NOT_FOUND' || code === 'PRODUCT_DUPLICATE') {
+      if (code === 'PRODUCT_NOT_FOUND' || code === 'PRODUCT_DUPLICATE') {
         show('productCard');
         showMessage('productMessage', message, 'error');
         return;
@@ -1078,7 +1068,6 @@
         console.error('Could not clear local session.');
       }
 
-      currentEmail = '';
       currentToken = '';
     }
 

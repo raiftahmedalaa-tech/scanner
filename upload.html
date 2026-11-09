@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>رفع المخزون</title>
+  <style>
+    :root { --primary:#2563eb; --primary-dark:#1d4ed8; --bg:#f3f6fb; --text:#172033; --muted:#64748b; --border:#e2e8f0; --ok:#15803d; --err:#b91c1c; }
+    * { box-sizing: border-box; }
+    body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font-family:Tahoma,Arial,sans-serif; }
+    .page { max-width:620px; margin:0 auto; padding:24px 14px; }
+    .card { background:#fff; border:1px solid var(--border); border-radius:18px; padding:22px; margin-bottom:14px; box-shadow:0 12px 35px rgba(15,23,42,.06); }
+    h1 { text-align:center; font-size:23px; margin:0 0 18px; }
+    h2 { font-size:18px; margin:0 0 10px; }
+    .hint { color:var(--muted); font-size:13px; line-height:1.9; margin:0 0 14px; }
+    label { display:block; font-size:14px; font-weight:700; margin-bottom:8px; }
+    input[type=password], input[type=file] { width:100%; min-height:48px; border:1px solid #cbd5e1; border-radius:12px; padding:12px 14px; font-size:16px; font-family:inherit; background:#fff; margin-bottom:12px; }
+    button { width:100%; min-height:48px; border:0; border-radius:12px; background:var(--primary); color:#fff; font-family:inherit; font-size:15px; font-weight:700; cursor:pointer; padding:12px 16px; }
+    button:hover { background:var(--primary-dark); }
+    button:disabled { opacity:.55; cursor:not-allowed; }
+    button.secondary { background:#fff; color:var(--primary); border:1px solid #bfdbfe; margin-bottom:14px; }
+    button.secondary:hover { background:#eff6ff; }
+    .message { border-radius:12px; padding:12px 14px; margin:0 0 14px; font-size:13px; line-height:1.9; overflow-wrap:anywhere; }
+    .message.error { background:#fef2f2; border:1px solid #fecaca; color:var(--err); }
+    .message.success { background:#f0fdf4; border:1px solid #bbf7d0; color:var(--ok); }
+    .message.info { background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8; }
+    ul.errors { margin:8px 0 0; padding:0 18px; max-height:260px; overflow-y:auto; }
+    .hidden { display:none !important; }
+  </style>
+</head>
+<body>
+<main class="page">
+  <h1>رفع المخزون</h1>
+
+  <section id="loginCard" class="card">
+    <h2>كلمة السر</h2>
+    <p class="hint">اكتب كلمة السر لفتح صفحة الرفع.</p>
+    <div id="loginMessage" class="message hidden" role="status"></div>
+    <form id="loginForm">
+      <input id="passwordInput" type="password" autocomplete="off" placeholder="كلمة السر" required>
+      <button id="loginButton" type="submit">دخول</button>
+    </form>
+  </section>
+
+  <section id="uploadCard" class="card hidden">
+    <h2>رفع ملف Excel</h2>
+    <p class="hint">
+      الملف لازم يحتوي على شيتين: <b dir="ltr">H-13</b> و <b dir="ltr">H-09,H-10,H-11</b>،
+      وفي كل شيت الأعمدة: <b dir="ltr">ProductCode, ProductName, Color, StockQTY</b>.
+      أي أعمدة زيادة بتتجاهل.
+    </p>
+
+    <button id="templateButton" type="button" class="secondary">Download Template</button>
+
+    <label for="fileInput">ملف Excel</label>
+    <input id="fileInput" type="file" accept=".xlsx,.xls">
+
+    <div id="message" class="message hidden" role="status" aria-live="polite"></div>
+
+    <button id="uploadButton" type="button" disabled>Upload File</button>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+  'use strict';
+
+  const API_URL = 'https://script.google.com/macros/s/AKfycbzfbcrBUqJULuQkvgCb_cwc8-VvZl8TyK_ZoFe0MNyN3ZlmOO4QpJEk0_Ly84I7UXUXSQ/exec';
+  const REQUIRED_SHEETS = ['H-13', 'H-09,H-10,H-11'];
+  const HEADERS = ['ProductCode', 'ProductName', 'Color', 'StockQTY'];
+  const BATCH_SIZE = 1000;
+  const REQUEST_TIMEOUT_MS = 90000;
+  const MAX_ERRORS_SHOWN = 60;
+
+  // كلمة السر في ذاكرة الصفحة فقط: بتتمسح مع أي ريفريش.
+  let password = '';
+  let parsed = null;
+  let busy = false;
+
+  const $ = function(id) { return document.getElementById(id); };
+
+  function show(id) { $(id).classList.remove('hidden'); }
+  function hide(id) { $(id).classList.add('hidden'); }
+
+  function showMessage(id, text, type, list) {
+    const el = $(id);
+    el.className = 'message ' + (type || 'info');
+    el.textContent = text || '';
+
+    if (Array.isArray(list) && list.length) {
+      const ul = document.createElement('ul');
+      ul.className = 'errors';
+
+      list.slice(0, MAX_ERRORS_SHOWN).forEach(function(item) {
+        const li = document.createElement('li');
+        li.textContent = item;
+        ul.appendChild(li);
+      });
+
+      if (list.length > MAX_ERRORS_SHOWN) {
+        const li = document.createElement('li');
+        li.textContent = 'و ' + (list.length - MAX_ERRORS_SHOWN) + ' أخطاء أخرى...';
+        ul.appendChild(li);
+      }
+
+      el.appendChild(ul);
+    }
+  }
+
+  function clearMessage(id) {
+    $(id).className = 'message hidden';
+    $(id).textContent = '';
+  }
+
+  function callServer(action, args) {
+    const controller = new AbortController();
+    const timer = setTimeout(function() { controller.abort(); }, REQUEST_TIMEOUT_MS);
+
+    return fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: action, args: args }),
+      signal: controller.signal
+    })
+      .then(function(response) {
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        return response.json();
+      })
+      .finally(function() { clearTimeout(timer); });
+  }
+
+  function callOk(action, args) {
+    return callServer(action, args).then(function(result) {
+      if (!result || result.ok !== true) {
+        throw new Error((result && result.message) || 'رفض الخادم الطلب.');
+      }
+      return result;
+    });
+  }
+
+  /* ---------------- تسجيل الدخول ---------------- */
+
+  $('loginForm').addEventListener('submit', function(event) {
+    event.preventDefault();
+    if (busy) return;
+
+    const value = $('passwordInput').value;
+    if (!value.trim()) return;
+
+    busy = true;
+    $('loginButton').disabled = true;
+    $('loginButton').textContent = 'جارٍ التحقق...';
+    clearMessage('loginMessage');
+
+    callServer('uploadAuth', [value])
+      .then(function(result) {
+        if (result && result.ok) {
+          password = value;
+          $('passwordInput').value = '';
+          hide('loginCard');
+          show('uploadCard');
+        } else {
+          showMessage('loginMessage', (result && result.message) || 'كلمة السر غير صحيحة.', 'error');
+        }
+      })
+      .catch(function() {
+        showMessage('loginMessage', 'تعذر الاتصال بالخادم. حاول مرة أخرى.', 'error');
+      })
+      .finally(function() {
+        busy = false;
+        $('loginButton').disabled = false;
+        $('loginButton').textContent = 'دخول';
+      });
+  });
+
+  /* ---------------- القالب ---------------- */
+
+  $('templateButton').addEventListener('click', function() {
+    if (typeof XLSX === 'undefined') {
+      showMessage('message', 'تعذر تحميل مكتبة Excel. تأكد من الإنترنت.', 'error');
+      return;
+    }
+
+    const wb = XLSX.utils.book_new();
+
+    REQUIRED_SHEETS.forEach(function(name) {
+      const ws = XLSX.utils.aoa_to_sheet([HEADERS]);
+      ws['!cols'] = HEADERS.map(function() { return { wch: 20 }; });
+      XLSX.utils.book_append_sheet(wb, ws, name);
+    });
+
+    XLSX.writeFile(wb, 'stock-upload-template.xlsx');
+  });
+
+  /* ---------------- قراءة الملف والتحقق ---------------- */
+
+  function norm(value) {
+    return String(value === null || value === undefined ? '' : value).trim().toLowerCase().replace(/\s+/g, '');
+  }
+
+  function cellText(value) {
+    return value === null || value === undefined ? '' : String(value).trim();
+  }
+
+  function parseQty(value) {
+    if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+    if (typeof value !== 'string') return null;
+
+    const text = value.trim().replace(/,/g, '');
+    if (text === '') return null;
+
+    const n = Number(text);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function parseWorkbook(wb) {
+    const errors = [];
+    const data = {};
+
+    REQUIRED_SHEETS.forEach(function(name) {
+      const actual = wb.SheetNames.find(function(n) {
+        return n.trim().toLowerCase() === name.toLowerCase();
+      });
+
+      if (!actual) {
+        errors.push('الشيت "' + name + '" غير موجود في الملف.');
+        return;
+      }
+
+      const ws = wb.Sheets[actual];
+      const ref = ws['!ref'];
+
+      if (!ref) {
+        errors.push('الشيت "' + name + '" فاضي.');
+        return;
+      }
+
+      const startRow = XLSX.utils.decode_range(ref).s.r;
+      const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: true, blankrows: true });
+
+      const headerRow = aoa[0] || [];
+      const idx = {};
+      const missing = [];
+
+      HEADERS.forEach(function(h) {
+        idx[h] = headerRow.findIndex(function(c) { return norm(c) === norm(h); });
+        if (idx[h] === -1) missing.push(h);
+      });
+
+      if (missing.length) {
+        errors.push('الشيت "' + name + '" ناقصه الأعمدة: ' + missing.join('، '));
+        return;
+      }
+
+      const rows = [];
+      const seen = {};
+      const before = errors.length;
+
+      for (let i = 1; i < aoa.length; i++) {
+        const r = aoa[i];
+        const rowNo = startRow + i + 1;
+
+        const code = cellText(r[idx.ProductCode]);
+        const pname = cellText(r[idx.ProductName]);
+        const color = cellText(r[idx.Color]);
+        const rawQty = r[idx.StockQTY];
+
+        if (!code && !pname && !color && cellText(rawQty) === '') continue;
+
+        if (!code) {
+          errors.push('الشيت "' + name + '" الصف ' + rowNo + ': ProductCode فاضي.');
+          continue;
+        }
+
+        const qty = parseQty(rawQty);
+
+        if (qty === null) {
+          errors.push('الشيت "' + name + '" الصف ' + rowNo + ' (' + code + '): StockQTY مش رقم صحيح.');
+          continue;
+        }
+
+        const key = code.toLowerCase() + '|' + color.toLowerCase();
+
+        if (seen[key]) {
+          errors.push('الشيت "' + name + '" الصف ' + rowNo + ': ' + code + ' / ' + (color || 'بدون لون') + ' مكرر (الصف ' + seen[key] + ').');
+          continue;
+        }
+
+        seen[key] = rowNo;
+        rows.push([code, pname, color, Math.round(qty * 1000) / 1000]);
+      }
+
+      if (errors.length === before && rows.length === 0) {
+        errors.push('الشيت "' + name + '" مفيهوش بيانات (عناوين فقط).');
+        return;
+      }
+
+      data[name] = rows;
+    });
+
+    return { errors: errors, data: data };
+  }
+
+  $('fileInput').addEventListener('change', function() {
+    parsed = null;
+    $('uploadButton').disabled = true;
+    clearMessage('message');
+
+    const file = $('fileInput').files[0];
+    if (!file) return;
+
+    if (typeof XLSX === 'undefined') {
+      showMessage('message', 'تعذر تحميل مكتبة Excel. تأكد من الإنترنت.', 'error');
+      return;
+    }
+
+    showMessage('message', 'جارٍ فحص الملف...', 'info');
+
+    file.arrayBuffer()
+      .then(function(buffer) {
+        const wb = XLSX.read(buffer, { type: 'array' });
+        const result = parseWorkbook(wb);
+
+        if (result.errors.length) {
+          showMessage('message', 'الملف فيه مشاكل ولم يتم قبوله (' + result.errors.length + '):', 'error', result.errors);
+          return;
+        }
+
+        parsed = result.data;
+
+        const summary = REQUIRED_SHEETS.map(function(n) { return n + ': ' + parsed[n].length + ' صف'; }).join(' | ');
+        showMessage('message', 'الملف سليم. ' + summary, 'success');
+        $('uploadButton').disabled = false;
+      })
+      .catch(function() {
+        showMessage('message', 'تعذر قراءة الملف. تأكد إنه ملف Excel سليم.', 'error');
+      });
+  });
+
+  /* ---------------- الرفع ---------------- */
+
+  function sessionItems(sessions) {
+    return sessions.map(function(s) {
+      return { warehouse: s.warehouse, sessionId: s.sessionId, total: parsed[s.warehouse].length };
+    });
+  }
+
+  $('uploadButton').addEventListener('click', async function() {
+    if (busy || !parsed) return;
+
+    busy = true;
+    $('uploadButton').disabled = true;
+    $('fileInput').disabled = true;
+    $('templateButton').disabled = true;
+
+    let sessions = [];
+    let committed = false;
+
+    try {
+      showMessage('message', 'جارٍ تجهيز الرفع...', 'info');
+      const start = await callOk('uploadStart', [password]);
+      sessions = start.sessions;
+
+      for (const s of sessions) {
+        const rows = parsed[s.warehouse];
+
+        for (let offset = 0; offset < rows.length; offset += BATCH_SIZE) {
+          const batch = rows.slice(offset, offset + BATCH_SIZE);
+
+          showMessage('message', 'جارٍ رفع ' + s.warehouse + ': ' + offset + ' / ' + rows.length, 'info');
+
+          const res = await callOk('uploadAppend', [password, s.warehouse, s.sessionId, offset, batch]);
+
+          if (res.received !== offset + batch.length) {
+            throw new Error('الخادم استلم ' + res.received + ' والمتوقع ' + (offset + batch.length));
+          }
+        }
+      }
+
+      showMessage('message', 'جارٍ التحقق والتبديل...', 'info');
+      const commit = await callOk('uploadCommit', [password, sessionItems(sessions)]);
+      committed = true;
+
+      showMessage(
+        'message',
+        'تم الرفع بنجاح: ' + commit.results.map(function(r) { return r.warehouse + ' (' + r.rows + ' صف)'; }).join(' | '),
+        'success'
+      );
+
+      parsed = null;
+      $('fileInput').value = '';
+    } catch (error) {
+      if (!committed && sessions.length) {
+        await callServer('uploadAbort', [password, sessionItems(sessions)]).catch(function() {});
+      }
+
+      showMessage('message', 'فشل الرفع ولم يتغير أي شيء: ' + (error && error.message ? error.message : error), 'error');
+      $('uploadButton').disabled = !parsed;
+    } finally {
+      busy = false;
+      $('fileInput').disabled = false;
+      $('templateButton').disabled = false;
+    }
+  });
+</script>
+</body>
+</html>

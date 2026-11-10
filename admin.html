@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>لوحة المستخدمين</title>
+  <style>
+    :root { --primary:#2563eb; --primary-dark:#1d4ed8; --bg:#f3f6fb; --text:#172033; --muted:#64748b; --border:#e2e8f0; --ok:#15803d; --err:#b91c1c; }
+    * { box-sizing: border-box; }
+    body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font-family:Tahoma,Arial,sans-serif; }
+    .page { max-width:1150px; margin:0 auto; padding:24px 14px; }
+    .page.narrow { max-width:620px; }
+    .card { background:#fff; border:1px solid var(--border); border-radius:18px; padding:22px; margin-bottom:14px; box-shadow:0 12px 35px rgba(15,23,42,.06); }
+    h1 { text-align:center; font-size:23px; margin:0 0 18px; }
+    h2 { font-size:18px; margin:0 0 10px; }
+    .hint { color:var(--muted); font-size:13px; line-height:1.9; margin:0 0 14px; }
+    label { display:block; font-size:13px; font-weight:700; margin-bottom:6px; }
+    input[type=password] { width:100%; min-height:48px; border:1px solid #cbd5e1; border-radius:12px; padding:12px 14px; font-size:16px; font-family:inherit; background:#fff; margin-bottom:12px; }
+    select { width:100%; min-height:44px; border:1px solid #cbd5e1; border-radius:12px; padding:10px 12px; font-size:14px; font-family:inherit; font-weight:600; background:#fff; color:var(--text); }
+    button { min-height:44px; border:0; border-radius:12px; background:var(--primary); color:#fff; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; padding:10px 16px; }
+    button:hover { background:var(--primary-dark); }
+    button:disabled { opacity:.55; cursor:not-allowed; }
+    button.full { width:100%; min-height:48px; font-size:15px; }
+    button.secondary { background:#fff; color:var(--primary); border:1px solid #bfdbfe; }
+    button.secondary:hover { background:#eff6ff; }
+    .message { border-radius:12px; padding:12px 14px; margin:0 0 14px; font-size:13px; line-height:1.9; overflow-wrap:anywhere; }
+    .message.error { background:#fef2f2; border:1px solid #fecaca; color:var(--err); }
+    .message.success { background:#f0fdf4; border:1px solid #bbf7d0; color:var(--ok); }
+    .message.info { background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8; }
+    .hidden { display:none !important; }
+
+    .toolbar { display:grid; grid-template-columns:1fr 1fr auto; gap:12px; align-items:end; margin-bottom:14px; }
+    @media (max-width:640px) { .toolbar { grid-template-columns:1fr; } }
+    .count { color:var(--muted); font-size:13px; margin-bottom:10px; }
+
+    .table-wrap { overflow:auto; border:1px solid var(--border); border-radius:12px; max-height:70vh; }
+    table { width:100%; border-collapse:collapse; font-size:13px; min-width:900px; }
+    th { position:sticky; top:0; background:#f8fafc; text-align:right; padding:11px 10px; font-size:12px; color:var(--muted); border-bottom:1px solid var(--border); white-space:nowrap; }
+    td { padding:10px; border-bottom:1px solid var(--border); vertical-align:middle; }
+    tbody tr:last-child td { border-bottom:0; }
+    td.ltr { direction:ltr; text-align:right; font-family:Arial,sans-serif; overflow-wrap:anywhere; }
+    td.num { direction:ltr; text-align:right; font-weight:700; }
+    .badge { display:inline-block; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:700; }
+    .badge.blocked { background:#fef2f2; color:var(--err); border:1px solid #fecaca; }
+    .badge.free { background:#f0fdf4; color:var(--ok); border:1px solid #bbf7d0; }
+    td button { min-height:36px; padding:6px 12px; font-size:13px; white-space:nowrap; }
+    .empty { text-align:center; color:var(--muted); padding:24px; }
+  </style>
+</head>
+<body>
+
+<main class="page narrow" id="pageRoot">
+  <h1>لوحة المستخدمين</h1>
+
+  <section id="loginCard" class="card">
+    <h2>كلمة السر</h2>
+    <p class="hint">اكتب كلمة السر لفتح لوحة المستخدمين.</p>
+    <div id="loginMessage" class="message hidden" role="status"></div>
+    <form id="loginForm">
+      <input id="passwordInput" type="password" autocomplete="off" placeholder="كلمة السر" required>
+      <button id="loginButton" class="full" type="submit">دخول</button>
+    </form>
+  </section>
+
+  <section id="usersCard" class="card hidden">
+    <div id="message" class="message hidden" role="status" aria-live="polite"></div>
+
+    <div class="toolbar">
+      <div>
+        <label for="blockFilter">الحالة</label>
+        <select id="blockFilter">
+          <option value="all">الجميع</option>
+          <option value="blocked">محظور</option>
+          <option value="free">غير محظور</option>
+        </select>
+      </div>
+      <div>
+        <label for="sortSelect">الترتيب حسب عدد مرات البحث</label>
+        <select id="sortSelect">
+          <option value="none">بدون ترتيب</option>
+          <option value="asc">تصاعدي</option>
+          <option value="desc">تنازلي</option>
+        </select>
+      </div>
+      <button id="refreshButton" type="button" class="secondary">تحديث</button>
+    </div>
+
+    <div id="count" class="count"></div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>الإيميل</th>
+            <th>صلاحيات المستخدم</th>
+            <th>عدد مرات تسجيل الدخول</th>
+            <th>عدد مرات البحث عن منتج</th>
+            <th>حظر</th>
+            <th>هوية المستخدم</th>
+            <th>آخر تسجيل دخول</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="usersBody"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script>
+  'use strict';
+
+  const API_URL = 'https://script.google.com/macros/s/AKfycbzfbcrBUqJULuQkvgCb_cwc8-VvZl8TyK_ZoFe0MNyN3ZlmOO4QpJEk0_Ly84I7UXUXSQ/exec';
+  const REQUEST_TIMEOUT_MS = 60000;
+
+  // كلمة السر في ذاكرة الصفحة فقط: بتتمسح مع أي ريفريش.
+  let password = '';
+  let users = [];
+  let busy = false;
+
+  const $ = function(id) { return document.getElementById(id); };
+
+  function show(id) { $(id).classList.remove('hidden'); }
+  function hide(id) { $(id).classList.add('hidden'); }
+
+  function showMessage(id, text, type) {
+    const el = $(id);
+    el.className = 'message ' + (type || 'info');
+    el.textContent = text || '';
+  }
+
+  function clearMessage(id) {
+    $(id).className = 'message hidden';
+    $(id).textContent = '';
+  }
+
+  function callServer(action, args) {
+    const controller = new AbortController();
+    const timer = setTimeout(function() { controller.abort(); }, REQUEST_TIMEOUT_MS);
+
+    return fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: action, args: args }),
+      signal: controller.signal
+    })
+      .then(function(response) {
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        return response.json();
+      })
+      .finally(function() { clearTimeout(timer); });
+  }
+
+  function callOk(action, args) {
+    return callServer(action, args).then(function(result) {
+      if (!result || result.ok !== true) {
+        throw new Error((result && result.message) || 'رفض الخادم الطلب.');
+      }
+      return result;
+    });
+  }
+
+  /* ---------------- تسجيل الدخول ---------------- */
+
+  $('loginForm').addEventListener('submit', function(event) {
+    event.preventDefault();
+    if (busy) return;
+
+    const value = $('passwordInput').value;
+    if (!value.trim()) return;
+
+    busy = true;
+    $('loginButton').disabled = true;
+    $('loginButton').textContent = 'جارٍ التحقق...';
+    clearMessage('loginMessage');
+
+    callServer('adminAuth', [value])
+      .then(function(result) {
+        if (result && result.ok) {
+          password = value;
+          $('passwordInput').value = '';
+          hide('loginCard');
+          $('pageRoot').classList.remove('narrow');
+          show('usersCard');
+          loadUsers();
+        } else {
+          showMessage('loginMessage', (result && result.message) || 'كلمة السر غير صحيحة.', 'error');
+        }
+      })
+      .catch(function() {
+        showMessage('loginMessage', 'تعذر الاتصال بالخادم. حاول مرة أخرى.', 'error');
+      })
+      .finally(function() {
+        busy = false;
+        $('loginButton').disabled = false;
+        $('loginButton').textContent = 'دخول';
+      });
+  });
+
+  /* ---------------- تحميل وعرض المستخدمين ---------------- */
+
+  function loadUsers() {
+    if (busy) return Promise.resolve();
+
+    busy = true;
+    $('refreshButton').disabled = true;
+    showMessage('message', 'جارٍ تحميل المستخدمين...', 'info');
+
+    return callOk('adminListUsers', [password])
+      .then(function(result) {
+        users = Array.isArray(result.users) ? result.users : [];
+        clearMessage('message');
+        render();
+      })
+      .catch(function(error) {
+        showMessage('message', 'تعذر تحميل البيانات: ' + (error && error.message ? error.message : error), 'error');
+      })
+      .finally(function() {
+        busy = false;
+        $('refreshButton').disabled = false;
+      });
+  }
+
+  function addCell(tr, text, className) {
+    const td = document.createElement('td');
+    if (className) td.className = className;
+    td.textContent = text;
+    tr.appendChild(td);
+    return td;
+  }
+
+  function visibleUsers() {
+    const filter = $('blockFilter').value;
+    const sort = $('sortSelect').value;
+
+    let list = users.filter(function(u) {
+      if (filter === 'blocked') return u.blocked;
+      if (filter === 'free') return !u.blocked;
+      return true;
+    });
+
+    if (sort === 'asc') {
+      list = list.slice().sort(function(a, b) { return a.searches - b.searches; });
+    } else if (sort === 'desc') {
+      list = list.slice().sort(function(a, b) { return b.searches - a.searches; });
+    }
+
+    return list;
+  }
+
+  function render() {
+    const body = $('usersBody');
+    body.replaceChildren();
+
+    const list = visibleUsers();
+    $('count').textContent = 'المعروض: ' + list.length + ' من ' + users.length;
+
+    if (list.length === 0) {
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 8;
+      td.className = 'empty';
+      td.textContent = 'لا يوجد مستخدمين.';
+      tr.appendChild(td);
+      body.appendChild(tr);
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+
+    list.forEach(function(u) {
+      const tr = document.createElement('tr');
+
+      addCell(tr, u.email, 'ltr');
+      addCell(tr, u.accessCode || '—', 'ltr');
+      addCell(tr, String(u.logins), 'num');
+      addCell(tr, String(u.searches), 'num');
+
+      const statusTd = document.createElement('td');
+      const badge = document.createElement('span');
+      badge.className = 'badge ' + (u.blocked ? 'blocked' : 'free');
+      badge.textContent = u.blocked ? 'محظور' : 'غير محظور';
+      statusTd.appendChild(badge);
+      tr.appendChild(statusTd);
+
+      addCell(tr, u.userIdentifier || '—');
+      addCell(tr, u.lastLogin || '—', 'ltr');
+
+      const actionTd = document.createElement('td');
+
+      if (u.blocked) {
+        const button = document.createElement('button');
+        button.type = 'button';
+
+        if (u.allow) {
+          button.textContent = 'تم الفك (بانتظار دخوله)';
+          button.disabled = true;
+        } else {
+          button.textContent = 'فك الحظر';
+          button.addEventListener('click', function() { unblock(u.email, button); });
+        }
+
+        actionTd.appendChild(button);
+      }
+
+      tr.appendChild(actionTd);
+      fragment.appendChild(tr);
+    });
+
+    body.appendChild(fragment);
+  }
+
+  /* ---------------- فك الحظر ---------------- */
+
+  function unblock(email, button) {
+    if (busy) return;
+
+    busy = true;
+    button.disabled = true;
+    button.textContent = 'جارٍ الفك...';
+    clearMessage('message');
+
+    callOk('adminUnblock', [password, email])
+      .then(function() {
+        busy = false;
+        showMessage('message', 'تم فك الحظر عن ' + email + '. يقدر يسجل دخول الآن.', 'success');
+        return loadUsers().then(function() {
+          showMessage('message', 'تم فك الحظر عن ' + email + '. يقدر يسجل دخول الآن.', 'success');
+        });
+      })
+      .catch(function(error) {
+        busy = false;
+        button.disabled = false;
+        button.textContent = 'فك الحظر';
+        showMessage('message', 'فشل فك الحظر: ' + (error && error.message ? error.message : error), 'error');
+      });
+  }
+
+  $('blockFilter').addEventListener('change', render);
+  $('sortSelect').addEventListener('change', render);
+  $('refreshButton').addEventListener('click', loadUsers);
+</script>
+</body>
+</html>

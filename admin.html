@@ -44,6 +44,7 @@
     .badge { display:inline-block; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:700; }
     .badge.blocked { background:#fef2f2; color:var(--err); border:1px solid #fecaca; }
     .badge.free { background:#f0fdf4; color:var(--ok); border:1px solid #bbf7d0; }
+    .badge.pending { background:#fffbeb; color:#b45309; border:1px solid #fde68a; }
     td button { min-height:36px; padding:6px 12px; font-size:13px; white-space:nowrap; }
     .empty { text-align:center; color:var(--muted); padding:24px; }
   </style>
@@ -72,6 +73,7 @@
         <select id="blockFilter">
           <option value="all">الجميع</option>
           <option value="blocked">محظور</option>
+          <option value="pending">بانتظار الدخول</option>
           <option value="free">غير محظور</option>
         </select>
       </div>
@@ -247,6 +249,7 @@
     let list = users.filter(function(u) {
       if (filter === 'blocked') return u.blocked;
       if (filter === 'free') return !u.blocked;
+      if (filter === 'pending') return !u.blocked && u.allow;
       return true;
     });
 
@@ -289,8 +292,18 @@
 
       const statusTd = document.createElement('td');
       const badge = document.createElement('span');
-      badge.className = 'badge ' + (u.blocked ? 'blocked' : 'free');
-      badge.textContent = u.blocked ? 'محظور' : 'غير محظور';
+
+      if (u.blocked) {
+        badge.className = 'badge blocked';
+        badge.textContent = 'محظور';
+      } else if (u.allow) {
+        badge.className = 'badge pending';
+        badge.textContent = 'تم فك الحظر وبانتظار دخوله';
+      } else {
+        badge.className = 'badge free';
+        badge.textContent = 'غير محظور';
+      }
+
       statusTd.appendChild(badge);
       tr.appendChild(statusTd);
 
@@ -302,15 +315,8 @@
       if (u.blocked) {
         const button = document.createElement('button');
         button.type = 'button';
-
-        if (u.allow) {
-          button.textContent = 'تم الفك (بانتظار دخوله)';
-          button.disabled = true;
-        } else {
-          button.textContent = 'فك الحظر';
-          button.addEventListener('click', function() { unblock(u.email, button); });
-        }
-
+        button.textContent = 'فك الحظر';
+        button.addEventListener('click', function() { unblock(u.email, button); });
         actionTd.appendChild(button);
       }
 

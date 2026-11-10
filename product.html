@@ -109,14 +109,6 @@
     button:active { transform: scale(.99); }
     button:disabled { opacity: .6; cursor: not-allowed; }
 
-    .logout-button {
-      background: #fff;
-      color: var(--danger);
-      border: 1px solid #fecaca;
-    }
-
-    .logout-button:hover { background: #fef2f2; }
-
     .message {
       border-radius: 12px;
       padding: 12px 14px;
@@ -354,6 +346,12 @@
       </div>
     </section>
 
+    <!-- خطأ مؤقت (نت / سيرفر): رسالة حمراء + زر إعادة تحميل -->
+    <section id="errorCard" class="card hidden">
+      <div id="errorMessage" class="message error" role="alert"></div>
+      <button id="reloadButton" type="button">إعادة تحميل الصفحة</button>
+    </section>
+
     <section id="productLoading" class="card loading-area hidden">
       <div class="spinner" aria-hidden="true"></div>
       <p>جارٍ التأكد من صلاحيات حسابك وتحميل بيانات المنتج...</p>
@@ -405,8 +403,6 @@
       </div>
 
       <button id="scanAnotherButton" type="button" style="margin-top:12px">مسح منتج آخر</button>
-
-      <button id="logoutButton" class="logout-button" type="button" style="margin-top:12px">تسجيل الخروج</button>
     </section>
 
     <section id="scanCard" class="card hidden">
@@ -414,17 +410,14 @@
       <p class="description">اضغط الزر لفتح الكاميرا ومسح QR Code الخاص بالمنتج.</p>
 
       <button id="startScanButton" type="button">مسح منتج</button>
-
-      <button id="scanLogoutButton" class="logout-button" type="button" style="margin-top:12px">تسجيل الخروج</button>
     </section>
   </main>
 
   <script>
     'use strict';
 
-    // رابط Apps Script (الـ API فقط) وروابط الصفحات على GitHub.
+    // رابط Apps Script (الـ API فقط) ورابط صفحة المسح على GitHub.
     const API_URL = 'https://script.google.com/macros/s/AKfycbzfbcrBUqJULuQkvgCb_cwc8-VvZl8TyK_ZoFe0MNyN3ZlmOO4QpJEk0_Ly84I7UXUXSQ/exec';
-    const HOME_URL = 'https://raiftahmedalaa-tech.github.io/scanner/product.html';
     const SCANNER_URL = 'https://raiftahmedalaa-tech.github.io/scanner/';
     const REQUEST_TIMEOUT_MS = 30000;
 
@@ -434,6 +427,10 @@
     const NOT_SPECIFIED_TEXT = 'غير محدد';
     const FILTER_ALL = '__all__';
     const NO_COLOR_LABEL = 'بدون لون';
+
+    // أكواد الرد اللي معناها إن الجلسة خلاصت أو الحساب اتحظر: نمسح التوكن ونرجع لتسجيل الدخول.
+    const LOGIN_REQUIRED_CODES = ['SESSION_INVALID', 'NOT_AUTHORIZED', 'ROLE_NOT_DEFINED', 'BLOCKED'];
+
     let currentToken = '';
     let busy = false;
 
@@ -470,10 +467,11 @@
       handleLogin();
     });
 
-    document.getElementById('logoutButton').addEventListener('click', handleLogout);
     document.getElementById('scanAnotherButton').addEventListener('click', openScanner);
     document.getElementById('startScanButton').addEventListener('click', openScanner);
-    document.getElementById('scanLogoutButton').addEventListener('click', handleLogout);
+    document.getElementById('reloadButton').addEventListener('click', function() {
+      window.location.reload();
+    });
 
     document.getElementById('warehouseFilter').addEventListener('change', applyStockFilters);
     document.getElementById('colorFilter').addEventListener('change', applyStockFilters);
@@ -493,6 +491,7 @@
     /**
      * - لو فيه منتج في الرابط: نطلب المنتج مباشرة (getProduct بتتحقق من الجلسة والصلاحية).
      * - لو مفيش: نتحقق من الجلسة ونعرض شاشة المسح.
+     * طالما فيه توكن محفوظ ما نوديش المستخدم لتسجيل الدخول إلا لو السيرفر قال إن الجلسة مش صالحة.
      */
     function initializePage() {
       const saved = getLocalSession();
@@ -527,24 +526,11 @@
             return;
           }
 
-          handleSessionFailure(result || { code: 'SESSION_INVALID' });
+          handleSessionFailure(result || { code: 'SERVER_ERROR' });
         },
         function(error) {
           console.error('Session validation failed:', error);
-
-          // عطل الاتصال لا يعني انتهاء الجلسة: نحتفظ بالتوكن ولا نعرض بيانات.
-          hide('initialLoading');
-          hide('productCard');
-          hide('productLoading');
-          clearProductView();
-          showLogin();
-          showEmailStep();
-
-          showMessage(
-            'loginMessage',
-            'تعذر الاتصال بالخادم للتحقق من الجلسة. لم يتم عرض بيانات المنتج. حاول مرة أخرى.',
-            'error'
-          );
+          showFatalError('تعذر الاتصال بالخادم. تأكد من الإنترنت ثم أعد تحميل الصفحة.');
         }
       );
     }
@@ -562,6 +548,16 @@
         return;
       }
 
+      // نتأكد إن المتصفح بيسمح بالتخزين قبل ما نسجل الدخول (التسجيل بيتحسب على الحساب).
+      if (!canUseStorage()) {
+        showMessage(
+          'loginMessage',
+          'المتصفح منع حفظ الجلسة. فعّل تخزين الموقع ثم حاول مرة أخرى.',
+          'error'
+        );
+        return;
+      }
+
       clearMessage('loginMessage');
       setBusy(true, 'loginButton', 'جارٍ الدخول...');
 
@@ -575,9 +571,6 @@
             try {
               saveLocalSession(result.token);
             } catch (error) {
-              // لا نترك الجلسة نشطة إذا تعذر حفظ التوكن.
-              callServer('logout', [result.token], function() {}, function() {});
-              clearLocalSession();
               showLogin();
 
               showMessage(
@@ -620,6 +613,7 @@
 
       hide('productCard');
       hide('initialLoading');
+      hide('errorCard');
       show('productLoading');
 
       callServer(
@@ -638,18 +632,7 @@
         },
         function(error) {
           console.error('Load product failed:', error);
-
-          hide('productLoading');
-          hide('productCard');
-          clearProductView();
-          showLogin();
-          showEmailStep();
-
-          showMessage(
-            'loginMessage',
-            'تعذر الاتصال بالخادم لتحميل بيانات المنتج. لم يتم عرض بيانات المنتج. حاول مرة أخرى.',
-            'error'
-          );
+          showFatalError('تعذر الاتصال بالخادم لتحميل بيانات المنتج. تأكد من الإنترنت ثم أعد تحميل الصفحة.');
         }
       );
     }
@@ -929,6 +912,11 @@
       document.getElementById('productFields').replaceChildren();
     }
 
+    /**
+     * فشل التحقق من الجلسة (validateSession):
+     * - خطأ مؤقت من السيرفر: رسالة حمراء + زر إعادة تحميل (التوكن يفضل محفوظ).
+     * - جلسة غير صالحة / إيميل اتشال / محظور: نمسح التوكن ونعرض تسجيل الدخول بالرسالة.
+     */
     function handleSessionFailure(result) {
       hide('initialLoading');
       hide('productLoading');
@@ -938,18 +926,15 @@
       const code = result && result.code;
       const message = result && result.message ? result.message : 'تعذر التحقق من الجلسة.';
 
-      if (code === 'SERVER_ERROR') {
-        // مشكلة مؤقتة: احتفظ بالتوكن ولا تعرض المنتج.
+      if (LOGIN_REQUIRED_CODES.indexOf(code) !== -1) {
+        clearLocalSession();
         showLogin();
         showEmailStep();
         showMessage('loginMessage', message, 'error');
         return;
       }
 
-      clearLocalSession();
-      showLogin();
-      showEmailStep();
-      showMessage('loginMessage', message, 'error');
+      showFatalError(message);
     }
 
     function handleProductFailure(result) {
@@ -960,7 +945,7 @@
       const code = result && result.code;
       const message = result && result.message ? result.message : 'تعذر تحميل بيانات المنتج.';
 
-      if (code === 'SESSION_INVALID' || code === 'NOT_AUTHORIZED' || code === 'ROLE_NOT_DEFINED') {
+      if (LOGIN_REQUIRED_CODES.indexOf(code) !== -1) {
         clearLocalSession();
         showLogin();
         showEmailStep();
@@ -974,10 +959,23 @@
         return;
       }
 
-      // لا نمسح التوكن عند حدوث خطأ مؤقت في الخادم.
-      showLogin();
-      showEmailStep();
-      showMessage('loginMessage', message, 'error');
+      // أي خطأ مؤقت تاني: لا نمسح التوكن.
+      showFatalError(message);
+    }
+
+    /**
+     * خطأ مؤقت: رسالة حمراء فوق زر "إعادة تحميل الصفحة".
+     */
+    function showFatalError(message) {
+      hide('initialLoading');
+      hide('productLoading');
+      hide('productCard');
+      hide('loginCard');
+      hide('scanCard');
+      clearProductView();
+
+      showMessage('errorMessage', message || 'حدث خطأ. أعد تحميل الصفحة.', 'error');
+      show('errorCard');
     }
 
     function openScanner(event) {
@@ -996,6 +994,7 @@
       hide('loginCard');
       hide('productLoading');
       hide('productCard');
+      hide('errorCard');
       show('scanCard');
     }
 
@@ -1007,45 +1006,6 @@
 
       showProduct();
       loadProduct();
-    }
-
-    function goToMainPage() {
-      window.location.replace(HOME_URL);
-    }
-
-    function handleLogout() {
-      if (busy) return;
-
-      const tokenToRevoke = currentToken;
-
-      clearLocalSession();
-      clearProductView();
-      showLogin();
-      showEmailStep();
-      clearMessage('loginMessage');
-
-      if (!tokenToRevoke) {
-        goToMainPage();
-        return;
-      }
-
-      callServer(
-        'logout',
-        [tokenToRevoke],
-        function() {
-          showMessage('loginMessage', 'تم تسجيل الخروج.', 'success');
-          goToMainPage();
-        },
-        function(error) {
-          console.error('Server logout failed:', error);
-
-          showMessage(
-            'loginMessage',
-            'تم مسح التوكن من هذا المتصفح، لكن تعذر تأكيد إلغاء الجلسة على الخادم بسبب مشكلة الاتصال.',
-            'error'
-          );
-        }
-      );
     }
 
     // حفظ التوكن فقط (لا نحفظ البريد).
@@ -1071,11 +1031,23 @@
       currentToken = '';
     }
 
+    function canUseStorage() {
+      try {
+        const testKey = SESSION_KEY + '_test';
+        localStorage.setItem(testKey, '1');
+        localStorage.removeItem(testKey);
+        return true;
+      } catch (error) {
+        return false;
+      }
+    }
+
     function showLogin() {
       hide('initialLoading');
       hide('productLoading');
       hide('productCard');
       hide('scanCard');
+      hide('errorCard');
       show('loginCard');
     }
 
@@ -1084,6 +1056,7 @@
       hide('loginCard');
       hide('productLoading');
       hide('scanCard');
+      hide('errorCard');
       show('productCard');
     }
 

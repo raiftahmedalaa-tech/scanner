@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>طباعة QR Code</title>
+  <style>
+    :root { --primary:#2563eb; --primary-dark:#1d4ed8; --bg:#f3f6fb; --text:#172033; --muted:#64748b; --border:#e2e8f0; --ok:#15803d; --err:#b91c1c; }
+    * { box-sizing: border-box; }
+    body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font-family:Tahoma,Arial,sans-serif; }
+    .page { max-width:720px; margin:0 auto; padding:24px 14px; }
+    .card { background:#fff; border:1px solid var(--border); border-radius:18px; padding:22px; margin-bottom:14px; box-shadow:0 12px 35px rgba(15,23,42,.06); }
+    h1 { text-align:center; font-size:23px; margin:0 0 18px; }
+    h2 { font-size:18px; margin:0 0 10px; }
+    .hint { color:var(--muted); font-size:13px; line-height:1.9; margin:0 0 14px; }
+    label.title { display:block; font-size:14px; font-weight:700; margin-bottom:8px; }
+    input[type=file] { width:100%; min-height:48px; border:1px solid #cbd5e1; border-radius:12px; padding:12px 14px; font-size:16px; font-family:inherit; background:#fff; margin-bottom:12px; }
+    button { width:100%; min-height:48px; border:0; border-radius:12px; background:var(--primary); color:#fff; font-family:inherit; font-size:15px; font-weight:700; cursor:pointer; padding:12px 16px; }
+    button:hover { background:var(--primary-dark); }
+    button:disabled { opacity:.55; cursor:not-allowed; }
+    button.secondary { background:#fff; color:var(--primary); border:1px solid #bfdbfe; margin-bottom:14px; }
+    button.secondary:hover { background:#eff6ff; }
+    .message { border-radius:12px; padding:12px 14px; margin:0 0 14px; font-size:13px; line-height:1.9; overflow-wrap:anywhere; }
+    .message.error { background:#fef2f2; border:1px solid #fecaca; color:var(--err); }
+    .message.success { background:#f0fdf4; border:1px solid #bbf7d0; color:var(--ok); }
+    .message.info { background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8; }
+    ul.errors { margin:8px 0 0; padding:0 18px; max-height:260px; overflow-y:auto; }
+    .hidden { display:none !important; }
+
+    .list-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; flex-wrap:wrap; }
+    .check-all { display:flex; align-items:center; gap:8px; font-weight:700; font-size:14px; cursor:pointer; }
+    .count { color:var(--muted); font-size:13px; }
+    .codes { max-height:55vh; overflow-y:auto; border:1px solid var(--border); border-radius:12px; padding:10px; display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:8px; margin-bottom:14px; }
+    .code-item { display:flex; align-items:center; gap:8px; padding:8px 10px; background:#f8fafc; border:1px solid var(--border); border-radius:10px; cursor:pointer; font-size:13px; }
+    .code-item:hover { background:#eff6ff; }
+    .code-item span { direction:ltr; font-family:Arial,sans-serif; font-weight:700; overflow-wrap:anywhere; }
+    input[type=checkbox] { width:18px; height:18px; flex-shrink:0; cursor:pointer; }
+
+    /* الاستيكرات: تظهر عند الطباعة فقط. مقاس الاستيكر 50 × 30 مم */
+    #labels { display:none; }
+    .label { width:50mm; height:30mm; overflow:hidden; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0.5mm 1mm; gap:0.4mm; text-align:center; break-inside:avoid; page-break-inside:avoid; }
+    .qr { display:block; width:18mm; height:18mm; flex:0 0 18mm; object-fit:contain; }
+    .product-id { width:100%; max-height:7mm; overflow:hidden; direction:ltr; font-family:Arial,sans-serif; font-size:9pt; font-weight:bold; line-height:1.1; overflow-wrap:anywhere; }
+
+    @page { size: 50mm 30mm; margin: 0; }
+
+    @media print {
+      html, body { display:block !important; width:50mm !important; min-width:0 !important; margin:0 !important; padding:0 !important; background:#fff !important; }
+      .no-print { display:none !important; }
+      #labels { display:block !important; width:50mm !important; margin:0 !important; padding:0 !important; }
+      .label { width:50mm !important; height:30mm !important; margin:0 !important; padding:0.5mm 1mm !important; border:0 !important; border-radius:0 !important; box-shadow:none !important; overflow:hidden !important; break-after:page; page-break-after:always; break-inside:avoid; page-break-inside:avoid; }
+      .label:last-child { break-after:auto; page-break-after:auto; }
+      .qr { width:18mm !important; height:18mm !important; }
+      .product-id { font-size:9pt !important; }
+    }
+  </style>
+</head>
+<body>
+<main class="page no-print">
+  <h1>طباعة QR Code</h1>
+
+  <section id="uploadCard" class="card">
+    <h2>رفع ملف Excel</h2>
+    <p class="hint">
+      الملف لازم يحتوي على شيت اسمه <b dir="ltr">QRCode</b> وفيه عمود اسمه <b dir="ltr">Product Code</b>.
+      أي أعمدة زيادة بتتجاهل، والصفوف الفاضية بتتجاهل.
+    </p>
+
+    <button id="templateButton" type="button" class="secondary">Download Template</button>
+
+    <label class="title" for="fileInput">ملف Excel</label>
+    <input id="fileInput" type="file" accept=".xlsx,.xls">
+
+    <div id="message" class="message hidden" role="status" aria-live="polite"></div>
+  </section>
+
+  <section id="listCard" class="card hidden">
+    <h2>اختر المنتجات للطباعة</h2>
+
+    <div class="list-head">
+      <label class="check-all"><input type="checkbox" id="selectAll"> تحديد الكل</label>
+      <span class="count" id="count"></span>
+    </div>
+
+    <div id="codesList" class="codes"></div>
+
+    <div id="printMessage" class="message hidden" role="status" aria-live="polite"></div>
+
+    <button id="printButton" type="button" class="hidden">Print QRCode</button>
+  </section>
+</main>
+
+<!-- محتوى الاستيكرات (للطباعة فقط) -->
+<div id="labels"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+  'use strict';
+
+  const SHEET_NAME = 'QRCode';
+  const HEADER = 'Product Code';
+  const PRODUCT_PAGE_URL = 'https://raiftahmedalaa-tech.github.io/scanner/product.html';
+  const QR_SERVICE = 'https://quickchart.io/qr';
+  const MAX_ERRORS_SHOWN = 60;
+
+  let codes = [];
+  let printing = false;
+
+  const $ = function(id) { return document.getElementById(id); };
+
+  function show(id) { $(id).classList.remove('hidden'); }
+  function hide(id) { $(id).classList.add('hidden'); }
+
+  function showMessage(id, text, type, list) {
+    const el = $(id);
+    el.className = 'message ' + (type || 'info');
+    el.textContent = text || '';
+
+    if (Array.isArray(list) && list.length) {
+      const ul = document.createElement('ul');
+      ul.className = 'errors';
+
+      list.slice(0, MAX_ERRORS_SHOWN).forEach(function(item) {
+        const li = document.createElement('li');
+        li.textContent = item;
+        ul.appendChild(li);
+      });
+
+      if (list.length > MAX_ERRORS_SHOWN) {
+        const li = document.createElement('li');
+        li.textContent = 'و ' + (list.length - MAX_ERRORS_SHOWN) + ' أخطاء أخرى...';
+        ul.appendChild(li);
+      }
+
+      el.appendChild(ul);
+    }
+  }
+
+  function clearMessage(id) {
+    $(id).className = 'message hidden';
+    $(id).textContent = '';
+  }
+
+  function norm(value) {
+    return String(value === null || value === undefined ? '' : value).trim().toLowerCase().replace(/\s+/g, '');
+  }
+
+  function cellText(value) {
+    return value === null || value === undefined ? '' : String(value).trim();
+  }
+
+  /* ---------------- القالب ---------------- */
+
+  $('templateButton').addEventListener('click', function() {
+    if (typeof XLSX === 'undefined') {
+      showMessage('message', 'تعذر تحميل مكتبة Excel. تأكد من الإنترنت.', 'error');
+      return;
+    }
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([[HEADER]]);
+    ws['!cols'] = [{ wch: 24 }];
+    XLSX.utils.book_append_sheet(wb, ws, SHEET_NAME);
+
+    XLSX.writeFile(wb, 'qrcode-template.xlsx');
+  });
+
+  /* ---------------- قراءة الملف والتحقق ---------------- */
+
+  function parseWorkbook(wb) {
+    const actual = wb.SheetNames.find(function(n) {
+      return n.trim().toLowerCase() === SHEET_NAME.toLowerCase();
+    });
+
+    if (!actual) {
+      return { errors: ['الشيت "' + SHEET_NAME + '" غير موجود في الملف.'], codes: [] };
+    }
+
+    const ws = wb.Sheets[actual];
+    const ref = ws['!ref'];
+
+    if (!ref) {
+      return { errors: ['الشيت "' + SHEET_NAME + '" فاضي.'], codes: [] };
+    }
+
+    const startRow = XLSX.utils.decode_range(ref).s.r;
+    const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false, blankrows: true });
+
+    const headerRow = aoa[0] || [];
+    const col = headerRow.findIndex(function(c) { return norm(c) === norm(HEADER); });
+
+    if (col === -1) {
+      return { errors: ['الشيت "' + SHEET_NAME + '" ناقصه العمود: ' + HEADER], codes: [] };
+    }
+
+    const errors = [];
+    const result = [];
+    const seen = {};
+
+    for (let i = 1; i < aoa.length; i++) {
+      const code = cellText((aoa[i] || [])[col]);
+      const rowNo = startRow + i + 1;
+
+      if (!code) continue;
+
+      const key = code.toLowerCase();
+
+      if (seen[key]) {
+        errors.push('الصف ' + rowNo + ': الكود "' + code + '" مكرر (الصف ' + seen[key] + ').');
+        continue;
+      }
+
+      seen[key] = rowNo;
+      result.push(code);
+    }
+
+    if (errors.length === 0 && result.length === 0) {
+      errors.push('الشيت "' + SHEET_NAME + '" مفيهوش أكواد منتجات.');
+    }
+
+    return { errors: errors, codes: result };
+  }
+
+  $('fileInput').addEventListener('change', function() {
+    codes = [];
+    hide('listCard');
+    clearMessage('message');
+    clearMessage('printMessage');
+
+    const file = $('fileInput').files[0];
+    if (!file) return;
+
+    if (typeof XLSX === 'undefined') {
+      showMessage('message', 'تعذر تحميل مكتبة Excel. تأكد من الإنترنت.', 'error');
+      return;
+    }
+
+    showMessage('message', 'جارٍ فحص الملف...', 'info');
+
+    file.arrayBuffer()
+      .then(function(buffer) {
+        const wb = XLSX.read(buffer, { type: 'array' });
+        const result = parseWorkbook(wb);
+
+        if (result.errors.length) {
+          showMessage('message', 'الملف فيه مشاكل ولم يتم قبوله (' + result.errors.length + '):', 'error', result.errors);
+          return;
+        }
+
+        codes = result.codes;
+        showMessage('message', 'الملف سليم. تم العثور على ' + codes.length + ' كود.', 'success');
+        renderList();
+      })
+      .catch(function() {
+        showMessage('message', 'تعذر قراءة الملف. تأكد إنه ملف Excel سليم.', 'error');
+      });
+  });
+
+  /* ---------------- قائمة الاختيار ---------------- */
+
+  function renderList() {
+    const list = $('codesList');
+    list.replaceChildren();
+
+    const fragment = document.createDocumentFragment();
+
+    codes.forEach(function(code, i) {
+      const item = document.createElement('label');
+      item.className = 'code-item';
+
+      const box = document.createElement('input');
+      box.type = 'checkbox';
+      box.dataset.index = String(i);
+
+      const text = document.createElement('span');
+      text.textContent = code;
+
+      item.appendChild(box);
+      item.appendChild(text);
+      fragment.appendChild(item);
+    });
+
+    list.appendChild(fragment);
+    $('selectAll').checked = false;
+    $('selectAll').indeterminate = false;
+
+    updateSelection();
+    show('listCard');
+  }
+
+  function checkboxes() {
+    return Array.from($('codesList').querySelectorAll('input[type=checkbox]'));
+  }
+
+  function selectedCodes() {
+    return checkboxes()
+      .filter(function(box) { return box.checked; })
+      .map(function(box) { return codes[Number(box.dataset.index)]; });
+  }
+
+  function updateSelection() {
+    const boxes = checkboxes();
+    const selected = boxes.filter(function(box) { return box.checked; }).length;
+
+    $('count').textContent = 'المحدد: ' + selected + ' من ' + boxes.length;
+    $('selectAll').checked = boxes.length > 0 && selected === boxes.length;
+    $('selectAll').indeterminate = selected > 0 && selected < boxes.length;
+
+    const button = $('printButton');
+    button.textContent = 'Print QRCode (' + selected + ')';
+
+    if (selected > 0) show('printButton'); else hide('printButton');
+  }
+
+  $('selectAll').addEventListener('change', function() {
+    const checked = $('selectAll').checked;
+
+    checkboxes().forEach(function(box) { box.checked = checked; });
+    updateSelection();
+  });
+
+  $('codesList').addEventListener('change', updateSelection);
+
+  /* ---------------- الطباعة ---------------- */
+
+  function buildLabels(selected) {
+    const container = $('labels');
+    container.replaceChildren();
+
+    const fragment = document.createDocumentFragment();
+
+    selected.forEach(function(code) {
+      const productUrl = PRODUCT_PAGE_URL + '?id=' + encodeURIComponent(code);
+
+      const label = document.createElement('article');
+      label.className = 'label';
+
+      const qr = document.createElement('img');
+      qr.className = 'qr';
+      qr.alt = '';
+      qr.loading = 'eager';
+      qr.src = QR_SERVICE + '?size=180&text=' + encodeURIComponent(productUrl);
+
+      const id = document.createElement('div');
+      id.className = 'product-id';
+      id.textContent = code;
+
+      // محتويات الاستيكر: QR Code + Product Code فقط.
+      label.appendChild(qr);
+      label.appendChild(id);
+      fragment.appendChild(label);
+    });
+
+    container.appendChild(fragment);
+  }
+
+  function waitForImages() {
+    const images = Array.from($('labels').querySelectorAll('img.qr'));
+
+    return Promise.all(images.map(function(img) {
+      if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+
+      return new Promise(function(resolve, reject) {
+        img.addEventListener('load', resolve, { once: true });
+        img.addEventListener('error', function() {
+          reject(new Error('تعذر تحميل صورة QR للمنتج ' + (img.nextSibling ? img.nextSibling.textContent : '') + '.'));
+        }, { once: true });
+      });
+    }));
+  }
+
+  $('printButton').addEventListener('click', async function() {
+    if (printing) return;
+
+    const selected = selectedCodes();
+    if (selected.length === 0) return;
+
+    printing = true;
+    $('printButton').disabled = true;
+    $('printButton').textContent = 'جارٍ تجهيز الطباعة...';
+    showMessage('printMessage', 'جارٍ تحميل ' + selected.length + ' QR...', 'info');
+
+    try {
+      buildLabels(selected);
+      await waitForImages();
+
+      clearMessage('printMessage');
+      window.print();
+    } catch (error) {
+      showMessage('printMessage', error && error.message ? error.message : 'تعذر تجهيز الطباعة.', 'error');
+    } finally {
+      printing = false;
+      $('printButton').disabled = false;
+      updateSelection();
+    }
+  });
+</script>
+</body>
+</html>

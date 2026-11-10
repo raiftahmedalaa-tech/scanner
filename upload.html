@@ -93,7 +93,7 @@
   const BATCH_SIZE = 1000;
   const REQUEST_TIMEOUT_MS = 90000;
   const MAX_ERRORS_SHOWN = 60;
-  const METERS_MULTIPLIER = 50;
+  const ROLLS_MULTIPLIER = 50;
 
   // كلمة السر في ذاكرة الصفحة فقط: بتتمسح مع أي ريفريش.
   let password = '';
@@ -401,14 +401,15 @@
     });
   }
 
-  // لو الوحدة "امتار" بنضرب StockQTY × 50 (على نسخة من الصفوف، من غير تعديل parsed).
+  // لو الوحدة "اتواب" بنضرب StockQTY × 50 (على نسخة من الصفوف، من غير تعديل parsed).
+  // لو الوحدة "امتار" الكميات بتتبعت زي ما هي.
   function rowsForUpload(warehouse) {
     const rows = parsed[warehouse];
 
-    if (unit !== 'meters') return rows;
+    if (unit !== 'rolls') return rows;
 
     return rows.map(function(r) {
-      return [r[0], r[1], r[2], Math.round(r[3] * METERS_MULTIPLIER * 1000) / 1000];
+      return [r[0], r[1], r[2], Math.round(r[3] * ROLLS_MULTIPLIER * 1000) / 1000];
     });
   }
 

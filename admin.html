@@ -17,6 +17,7 @@
     label { display:block; font-size:13px; font-weight:700; margin-bottom:6px; }
     input[type=password] { width:100%; min-height:48px; border:1px solid #cbd5e1; border-radius:12px; padding:12px 14px; font-size:16px; font-family:inherit; background:#fff; margin-bottom:12px; }
     select { width:100%; min-height:44px; border:1px solid #cbd5e1; border-radius:12px; padding:10px 12px; font-size:14px; font-family:inherit; font-weight:600; background:#fff; color:var(--text); }
+    select:disabled { opacity:.55; cursor:not-allowed; }
     button { min-height:44px; border:0; border-radius:12px; background:var(--primary); color:#fff; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; padding:10px 16px; }
     button:hover { background:var(--primary-dark); }
     button:disabled { opacity:.55; cursor:not-allowed; }
@@ -182,10 +183,13 @@
           hide('loginCard');
           $('pageRoot').classList.remove('narrow');
           show('usersCard');
-          loadUsers();
-        } else {
-          showMessage('loginMessage', (result && result.message) || 'كلمة السر غير صحيحة.', 'error');
+
+          // نجيب البيانات تلقائيًا بعد الدخول. true = اشتغل حتى لو busy مقفولة،
+          // والـ finally هنا هتستنى لحد ما التحميل يخلص (فمفيش فجوة).
+          return loadUsers(true);
         }
+
+        showMessage('loginMessage', (result && result.message) || 'كلمة السر غير صحيحة.', 'error');
       })
       .catch(function() {
         showMessage('loginMessage', 'تعذر الاتصال بالخادم. حاول مرة أخرى.', 'error');
@@ -199,12 +203,19 @@
 
   /* ---------------- تحميل وعرض المستخدمين ---------------- */
 
-  function loadUsers() {
-    if (busy) return Promise.resolve();
+  // قفل/فتح أدوات التحكم أثناء جلب البيانات.
+  function setControlsDisabled(disabled) {
+    $('refreshButton').disabled = disabled;
+    $('blockFilter').disabled = disabled;
+    $('sortSelect').disabled = disabled;
+  }
+
+  function loadUsers(force) {
+    if (busy && force !== true) return Promise.resolve();
 
     busy = true;
-    $('refreshButton').disabled = true;
-    showMessage('message', 'جارٍ تحميل المستخدمين...', 'info');
+    setControlsDisabled(true);
+    showMessage('message', 'جاري جلب البيانات...', 'info');
 
     return callOk('adminListUsers', [password])
       .then(function(result) {
@@ -217,7 +228,7 @@
       })
       .finally(function() {
         busy = false;
-        $('refreshButton').disabled = false;
+        setControlsDisabled(false);
       });
   }
 
@@ -338,7 +349,7 @@
 
   $('blockFilter').addEventListener('change', render);
   $('sortSelect').addEventListener('change', render);
-  $('refreshButton').addEventListener('click', loadUsers);
+  $('refreshButton').addEventListener('click', function() { loadUsers(); });
 </script>
 </body>
 </html>

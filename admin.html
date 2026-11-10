@@ -75,7 +75,7 @@
         </select>
       </div>
       <div>
-        <label for="sortSelect">الترتيب حسب عدد مرات البحث</label>
+        <label for="sortSelect">الترتيب حسب عدد مرات البحث عن منتج</label>
         <select id="sortSelect">
           <option value="none">بدون ترتيب</option>
           <option value="asc">تصاعدي</option>
@@ -97,7 +97,7 @@
             <th>عدد مرات البحث عن منتج</th>
             <th>حظر</th>
             <th>هوية المستخدم</th>
-            <th>آخر تسجيل دخول</th>
+            <th>آخر بحث عن منتج</th>
             <th></th>
           </tr>
         </thead>
@@ -284,7 +284,7 @@
       tr.appendChild(statusTd);
 
       addCell(tr, u.userIdentifier || '—');
-      addCell(tr, u.lastLogin || '—', 'ltr');
+      addCell(tr, u.lastSearch || '—', 'ltr');
 
       const actionTd = document.createElement('td');
 

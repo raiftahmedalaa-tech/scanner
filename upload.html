@@ -26,6 +26,15 @@
     .message.info { background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8; }
     ul.errors { margin:8px 0 0; padding:0 18px; max-height:260px; overflow-y:auto; }
     .hidden { display:none !important; }
+
+    /* سؤال وحدة الكميات */
+    .unit-box { border:1px solid var(--border); background:#f8fafc; border-radius:14px; padding:14px; margin:0 0 14px; }
+    .unit-question { font-size:14px; font-weight:700; margin:0 0 10px; }
+    .unit-buttons { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .unit-buttons button { background:#fff; color:var(--primary); border:2px solid #bfdbfe; min-height:46px; }
+    .unit-buttons button:hover { background:#eff6ff; }
+    .unit-buttons button.selected { background:var(--primary); color:#fff; border-color:var(--primary); }
+    .unit-buttons button.selected:hover { background:var(--primary-dark); }
   </style>
 </head>
 <body>
@@ -62,6 +71,14 @@
 
     <div id="message" class="message hidden" role="status" aria-live="polite"></div>
 
+    <div id="unitBox" class="unit-box hidden">
+      <p class="unit-question">وحده كميات هذه الشيت تحتوي علي</p>
+      <div class="unit-buttons">
+        <button id="unitRolls" type="button">اتواب</button>
+        <button id="unitMeters" type="button">امتار</button>
+      </div>
+    </div>
+
     <button id="uploadButton" type="button" disabled>Upload File</button>
   </section>
 </main>
@@ -76,11 +93,15 @@
   const BATCH_SIZE = 1000;
   const REQUEST_TIMEOUT_MS = 90000;
   const MAX_ERRORS_SHOWN = 60;
+  const METERS_MULTIPLIER = 50;
 
   // كلمة السر في ذاكرة الصفحة فقط: بتتمسح مع أي ريفريش.
   let password = '';
   let parsed = null;
   let busy = false;
+
+  // وحدة الكميات المختارة: null = لسه ما اختارش، 'rolls' = اتواب، 'meters' = امتار.
+  let unit = null;
 
   const $ = function(id) { return document.getElementById(id); };
 
@@ -142,6 +163,32 @@
       return result;
     });
   }
+
+  /* ---------------- اختيار الوحدة (اتواب / امتار) ---------------- */
+
+  function updateUnitUI() {
+    $('unitRolls').classList.toggle('selected', unit === 'rolls');
+    $('unitMeters').classList.toggle('selected', unit === 'meters');
+    $('uploadButton').disabled = busy || !parsed || !unit;
+  }
+
+  function resetUnit() {
+    unit = null;
+    hide('unitBox');
+    updateUnitUI();
+  }
+
+  $('unitRolls').addEventListener('click', function() {
+    if (busy) return;
+    unit = 'rolls';
+    updateUnitUI();
+  });
+
+  $('unitMeters').addEventListener('click', function() {
+    if (busy) return;
+    unit = 'meters';
+    updateUnitUI();
+  });
 
   /* ---------------- تسجيل الدخول ---------------- */
 
@@ -308,7 +355,7 @@
 
   $('fileInput').addEventListener('change', function() {
     parsed = null;
-    $('uploadButton').disabled = true;
+    resetUnit();
     clearMessage('message');
 
     const file = $('fileInput').files[0];
@@ -335,7 +382,11 @@
 
         const summary = REQUIRED_SHEETS.map(function(n) { return n + ': ' + parsed[n].length + ' صف'; }).join(' | ');
         showMessage('message', 'الملف سليم. ' + summary, 'success');
-        $('uploadButton').disabled = false;
+
+        // الملف سليم: نسأل عن وحدة الكميات. زر الرفع يفضل مقفول لحد الاختيار.
+        unit = null;
+        show('unitBox');
+        updateUnitUI();
       })
       .catch(function() {
         showMessage('message', 'تعذر قراءة الملف. تأكد إنه ملف Excel سليم.', 'error');
@@ -350,13 +401,26 @@
     });
   }
 
+  // لو الوحدة "امتار" بنضرب StockQTY × 50 (على نسخة من الصفوف، من غير تعديل parsed).
+  function rowsForUpload(warehouse) {
+    const rows = parsed[warehouse];
+
+    if (unit !== 'meters') return rows;
+
+    return rows.map(function(r) {
+      return [r[0], r[1], r[2], Math.round(r[3] * METERS_MULTIPLIER * 1000) / 1000];
+    });
+  }
+
   $('uploadButton').addEventListener('click', async function() {
-    if (busy || !parsed) return;
+    if (busy || !parsed || !unit) return;
 
     busy = true;
     $('uploadButton').disabled = true;
     $('fileInput').disabled = true;
     $('templateButton').disabled = true;
+    $('unitRolls').disabled = true;
+    $('unitMeters').disabled = true;
 
     let sessions = [];
     let committed = false;
@@ -367,7 +431,7 @@
       sessions = start.sessions;
 
       for (const s of sessions) {
-        const rows = parsed[s.warehouse];
+        const rows = rowsForUpload(s.warehouse);
 
         for (let offset = 0; offset < rows.length; offset += BATCH_SIZE) {
           const batch = rows.slice(offset, offset + BATCH_SIZE);
@@ -394,17 +458,21 @@
 
       parsed = null;
       $('fileInput').value = '';
+      unit = null;
+      hide('unitBox');
     } catch (error) {
       if (!committed && sessions.length) {
         await callServer('uploadAbort', [password, sessionItems(sessions)]).catch(function() {});
       }
 
       showMessage('message', 'فشل الرفع ولم يتغير أي شيء: ' + (error && error.message ? error.message : error), 'error');
-      $('uploadButton').disabled = !parsed;
     } finally {
       busy = false;
       $('fileInput').disabled = false;
       $('templateButton').disabled = false;
+      $('unitRolls').disabled = false;
+      $('unitMeters').disabled = false;
+      updateUnitUI();
     }
   });
 </script>

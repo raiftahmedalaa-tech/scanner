@@ -32,7 +32,12 @@
 
     .toolbar { display:grid; grid-template-columns:1fr 1fr auto; gap:12px; align-items:end; margin-bottom:14px; }
     @media (max-width:640px) { .toolbar { grid-template-columns:1fr; } }
-    .count { color:var(--muted); font-size:13px; margin-bottom:10px; }
+    .count-row { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+    .count { color:var(--muted); font-size:13px; }
+    .live { color:var(--muted); font-size:12px; display:flex; align-items:center; gap:6px; }
+    .live .dot { width:8px; height:8px; border-radius:50%; background:var(--ok); }
+    .live.warn { color:var(--err); }
+    .live.warn .dot { background:var(--err); }
 
     .table-wrap { overflow:auto; border:1px solid var(--border); border-radius:12px; max-height:70vh; }
     table { width:100%; border-collapse:collapse; font-size:13px; min-width:900px; }
@@ -88,7 +93,10 @@
       <button id="refreshButton" type="button" class="secondary">تحديث</button>
     </div>
 
-    <div id="count" class="count"></div>
+    <div class="count-row">
+      <div id="count" class="count"></div>
+      <div id="liveStatus" class="live"><span class="dot"></span><span id="liveText">تحديث تلقائي</span></div>
+    </div>
 
     <div class="table-wrap">
       <table>
@@ -116,10 +124,19 @@
   const API_URL = 'https://script.google.com/macros/s/AKfycbzfbcrBUqJULuQkvgCb_cwc8-VvZl8TyK_ZoFe0MNyN3ZlmOO4QpJEk0_Ly84I7UXUXSQ/exec';
   const REQUEST_TIMEOUT_MS = 60000;
 
+  // كل كام ثانية يتحدث الجدول تلقائيًا (بيقف لما التبويب يتخبى).
+  const POLL_INTERVAL_MS = 15000;
+
   // كلمة السر في ذاكرة الصفحة فقط: بتتمسح مع أي ريفريش.
   let password = '';
   let users = [];
   let busy = false;
+
+  // التحديث التلقائي.
+  let pollTimer = null;
+  let polling = false;
+  let requestSeq = 0;
+  let lastSnapshot = '';
 
   const $ = function(id) { return document.getElementById(id); };
 
@@ -186,9 +203,8 @@
           $('pageRoot').classList.remove('narrow');
           show('usersCard');
 
-          // نجيب البيانات تلقائيًا بعد الدخول. true = اشتغل حتى لو busy مقفولة،
-          // والـ finally هنا هتستنى لحد ما التحميل يخلص (فمفيش فجوة).
-          return loadUsers(true);
+          // نجيب البيانات تلقائيًا بعد الدخول، وبعدها نبدأ التحديث التلقائي.
+          return loadUsers(true).then(startPolling);
         }
 
         showMessage('loginMessage', (result && result.message) || 'كلمة السر غير صحيحة.', 'error');
@@ -205,25 +221,53 @@
 
   /* ---------------- تحميل وعرض المستخدمين ---------------- */
 
-  // قفل/فتح أدوات التحكم أثناء جلب البيانات.
+  // قفل/فتح أدوات التحكم أثناء الجلب اليدوي (التحديث التلقائي ما بيقفلهاش).
   function setControlsDisabled(disabled) {
     $('refreshButton').disabled = disabled;
     $('blockFilter').disabled = disabled;
     $('sortSelect').disabled = disabled;
   }
 
+  function two(n) { return n < 10 ? '0' + n : String(n); }
+
+  function setLiveStatus(ok, text) {
+    $('liveStatus').className = 'live' + (ok ? '' : ' warn');
+    $('liveText').textContent = text;
+  }
+
+  function markUpdated() {
+    const d = new Date();
+    setLiveStatus(true, 'تحديث تلقائي • آخر تحديث ' + two(d.getHours()) + ':' + two(d.getMinutes()) + ':' + two(d.getSeconds()));
+  }
+
+  // يطبّق القائمة الجديدة، ويعيد رسم الجدول فقط لو البيانات اتغيرت (أو force).
+  function applyUsers(list, force) {
+    const snapshot = JSON.stringify(list);
+    const changed = force === true || snapshot !== lastSnapshot;
+
+    lastSnapshot = snapshot;
+    users = list;
+
+    if (changed) render();
+
+    markUpdated();
+  }
+
+  // تحميل يدوي (الدخول / زر تحديث / بعد فك الحظر): بيظهر رسالة وبيقفل الأدوات.
   function loadUsers(force) {
     if (busy && force !== true) return Promise.resolve();
 
     busy = true;
+    const mySeq = ++requestSeq;
     setControlsDisabled(true);
     showMessage('message', 'جاري جلب البيانات...', 'info');
 
     return callOk('adminListUsers', [password])
       .then(function(result) {
-        users = Array.isArray(result.users) ? result.users : [];
+        if (mySeq !== requestSeq) return;
+
+        applyUsers(Array.isArray(result.users) ? result.users : [], true);
         clearMessage('message');
-        render();
       })
       .catch(function(error) {
         showMessage('message', 'تعذر تحميل البيانات: ' + (error && error.message ? error.message : error), 'error');
@@ -233,6 +277,41 @@
         setControlsDisabled(false);
       });
   }
+
+  // تحديث تلقائي صامت: من غير رسائل ومن غير قفل أدوات، وبيتخطى لو في عملية شغالة.
+  function pollUsers() {
+    if (!password || busy || polling || document.hidden) return;
+
+    polling = true;
+    const mySeq = ++requestSeq;
+
+    callOk('adminListUsers', [password])
+      .then(function(result) {
+        // لو اتبدأت عملية أحدث (تحميل يدوي أو فك حظر) نتجاهل الرد القديم.
+        if (mySeq !== requestSeq || busy) return;
+
+        applyUsers(Array.isArray(result.users) ? result.users : [], false);
+      })
+      .catch(function() {
+        if (mySeq !== requestSeq) return;
+
+        // البيانات الحالية تفضل ظاهرة، والمحاولة الجاية تلقائية.
+        setLiveStatus(false, 'تعذر التحديث التلقائي، سيُعاد المحاولة');
+      })
+      .finally(function() {
+        polling = false;
+      });
+  }
+
+  function startPolling() {
+    if (pollTimer) return;
+    pollTimer = setInterval(pollUsers, POLL_INTERVAL_MS);
+  }
+
+  // أول ما ترجع للتبويب: تحديث فوري.
+  document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) pollUsers();
+  });
 
   function addCell(tr, text, className) {
     const td = document.createElement('td');
@@ -333,6 +412,8 @@
     if (busy) return;
 
     busy = true;
+    // أي تحديث تلقائي شغال دلوقتي رده يتجاهل.
+    requestSeq++;
     button.disabled = true;
     button.textContent = 'جارٍ الفك...';
     clearMessage('message');

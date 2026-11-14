@@ -94,14 +94,18 @@
 <div id="labels"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script>
   'use strict';
 
   const SHEET_NAME = 'QRCode';
   const HEADER = 'Product Code';
   const PRODUCT_PAGE_URL = 'https://raiftahmedalaa-tech.github.io/scanner/product.html';
-  const QR_SERVICE = 'https://quickchart.io/qr';
   const MAX_ERRORS_SHOWN = 60;
+
+  // إعدادات الـ QR: تصحيح أخطاء M، وهامش أبيض 2 وحدة (كافي للمسح، ويخلي المربعات أكبر على استيكر صغير).
+  const QR_ERROR_LEVEL = 'M';
+  const QR_MARGIN_MODULES = 2;
 
   let codes = [];
   let printing = false;
@@ -321,9 +325,45 @@
 
   $('codesList').addEventListener('change', updateSelection);
 
+  /* ---------------- توليد الـ QR محليًا ---------------- */
+
+  /**
+   * يولّد QR كصورة SVG (data URI) من غير أي طلب شبكة:
+   * أكواد المنتجات ما بتخرجش من المتصفح، والـ SVG بيتطبع حاد على أي مقاس.
+   */
+  function makeQrDataUrl(text) {
+    const qr = qrcode(0, QR_ERROR_LEVEL); // 0 = اختيار الإصدار تلقائيًا حسب طول النص
+    qr.addData(text);
+    qr.make();
+
+    const count = qr.getModuleCount();
+    const size = count + QR_MARGIN_MODULES * 2;
+    let path = '';
+
+    for (let r = 0; r < count; r++) {
+      for (let c = 0; c < count; c++) {
+        if (qr.isDark(r, c)) {
+          path += 'M' + (c + QR_MARGIN_MODULES) + ',' + (r + QR_MARGIN_MODULES) + 'h1v1h-1z';
+        }
+      }
+    }
+
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + size + ' ' + size + '" shape-rendering="crispEdges">' +
+      '<rect width="100%" height="100%" fill="#fff"/>' +
+      '<path d="' + path + '" fill="#000"/>' +
+      '</svg>';
+
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  }
+
   /* ---------------- الطباعة ---------------- */
 
   function buildLabels(selected) {
+    if (typeof qrcode === 'undefined') {
+      throw new Error('تعذر تحميل مكتبة الـ QR. تأكد من الإنترنت ثم أعد تحميل الصفحة.');
+    }
+
     const container = $('labels');
     container.replaceChildren();
 
@@ -332,14 +372,21 @@
     selected.forEach(function(code) {
       const productUrl = PRODUCT_PAGE_URL + '?id=' + encodeURIComponent(code);
 
+      let dataUrl;
+
+      try {
+        dataUrl = makeQrDataUrl(productUrl);
+      } catch (error) {
+        throw new Error('تعذر توليد QR للمنتج ' + code + ' (الكود طويل جدًا؟).');
+      }
+
       const label = document.createElement('article');
       label.className = 'label';
 
       const qr = document.createElement('img');
       qr.className = 'qr';
       qr.alt = '';
-      qr.loading = 'eager';
-      qr.src = QR_SERVICE + '?size=180&text=' + encodeURIComponent(productUrl);
+      qr.src = dataUrl;
 
       const id = document.createElement('div');
       id.className = 'product-id';
@@ -354,6 +401,7 @@
     container.appendChild(fragment);
   }
 
+  // الصور data URI فبتتحمل فورًا تقريبًا، بس نستنى للتأكد قبل ما نفتح نافذة الطباعة.
   function waitForImages() {
     const images = Array.from($('labels').querySelectorAll('img.qr'));
 
@@ -363,7 +411,7 @@
       return new Promise(function(resolve, reject) {
         img.addEventListener('load', resolve, { once: true });
         img.addEventListener('error', function() {
-          reject(new Error('تعذر تحميل صورة QR للمنتج ' + (img.nextSibling ? img.nextSibling.textContent : '') + '.'));
+          reject(new Error('تعذر تجهيز صورة QR للمنتج ' + (img.nextSibling ? img.nextSibling.textContent : '') + '.'));
         }, { once: true });
       });
     }));
@@ -378,7 +426,7 @@
     printing = true;
     $('printButton').disabled = true;
     $('printButton').textContent = 'جارٍ تجهيز الطباعة...';
-    showMessage('printMessage', 'جارٍ تحميل ' + selected.length + ' QR...', 'info');
+    showMessage('printMessage', 'جارٍ تجهيز ' + selected.length + ' QR...', 'info');
 
     try {
       buildLabels(selected);

@@ -14,6 +14,7 @@
       --label-h: 24mm;
       --qr-size: 14mm;
       --id-font: 8pt;
+      --shift-up: 2mm; /* ارفع المحتوى لفوق: زوّدها لو عايز أكتر */
     }
     * { box-sizing: border-box; }
     body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font-family:Tahoma,Arial,sans-serif; }
@@ -47,7 +48,7 @@
 
     /* الاستيكرات: تظهر عند الطباعة فقط. المقاس من المتغيرات فوق (50 × 25 مم) */
     #labels { display:none; }
-    .label { width:var(--label-w); height:var(--label-h); overflow:hidden; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0.5mm 1mm; gap:0.3mm; text-align:center; break-inside:avoid; page-break-inside:avoid; }
+    .label { width:var(--label-w); height:var(--label-h); overflow:hidden; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0.5mm 1mm calc(0.5mm + var(--shift-up) * 2); gap:0.3mm; text-align:center; break-inside:avoid; page-break-inside:avoid; }
     .qr { display:block; width:var(--qr-size); height:var(--qr-size); flex:0 0 var(--qr-size); object-fit:contain; }
     .product-id { width:100%; max-height:5mm; overflow:hidden; direction:ltr; font-family:Arial,sans-serif; font-size:var(--id-font); font-weight:bold; line-height:1.1; overflow-wrap:anywhere; }
 
@@ -57,7 +58,7 @@
       html, body { display:block !important; width:var(--label-w) !important; min-width:0 !important; margin:0 !important; padding:0 !important; background:#fff !important; }
       .no-print { display:none !important; }
       #labels { display:block !important; width:var(--label-w) !important; margin:0 !important; padding:0 !important; }
-      .label { width:var(--label-w) !important; height:var(--label-h) !important; margin:0 !important; padding:0.5mm 1mm !important; border:0 !important; border-radius:0 !important; box-shadow:none !important; overflow:hidden !important; break-after:page; page-break-after:always; break-inside:avoid; page-break-inside:avoid; }
+      .label { width:var(--label-w) !important; height:var(--label-h) !important; margin:0 !important; padding:0.5mm 1mm calc(0.5mm + var(--shift-up) * 2) !important; border:0 !important; border-radius:0 !important; box-shadow:none !important; overflow:hidden !important; break-after:page; page-break-after:always; break-inside:avoid; page-break-inside:avoid; }
       .label:last-child { break-after:auto; page-break-after:auto; }
       .qr { width:var(--qr-size) !important; height:var(--qr-size) !important; }
       .product-id { font-size:var(--id-font) !important; }

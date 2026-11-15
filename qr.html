@@ -13,8 +13,8 @@
       --label-w: 50mm;
       --label-h: 24mm;
       --qr-size: 14mm;
-      --id-font: 8pt;
-      --shift-up: 2.5mm; /* ارفع المحتوى لفوق: زوّدها لو عايز أكتر */
+      --id-font: 9pt;
+      --shift-up: 2mm; /* ارفع المحتوى لفوق: زوّدها لو عايز أكتر */
     }
     * { box-sizing: border-box; }
     body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font-family:Tahoma,Arial,sans-serif; }
@@ -50,7 +50,7 @@
     #labels { display:none; }
     .label { width:var(--label-w); height:var(--label-h); overflow:hidden; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0.5mm 1mm calc(0.5mm + var(--shift-up) * 2); gap:0.3mm; text-align:center; break-inside:avoid; page-break-inside:avoid; }
     .qr { display:block; width:var(--qr-size); height:var(--qr-size); flex:0 0 var(--qr-size); object-fit:contain; }
-    .product-id { width:100%; max-height:5mm; overflow:hidden; direction:ltr; font-family:Arial,sans-serif; font-size:var(--id-font); font-weight:bold; line-height:1.1; overflow-wrap:anywhere; }
+    .product-id { width:100%; max-height:5mm; overflow:hidden; direction:ltr; font-family:Consolas,'Lucida Console','Courier New',monospace; font-size:var(--id-font); font-weight:bold; letter-spacing:0.35mm; line-height:1.1; overflow-wrap:anywhere; }
 
     @page { size: 50mm 25mm; margin: 0; }
 

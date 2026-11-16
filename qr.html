@@ -14,6 +14,8 @@
       --label-h: 24mm;
       --qr-size: 14mm;
       --id-font: 9pt;
+      --text-w: 46mm;   /* عرض صورة الكود (46 مم = 368 نقطة على 203dpi) */
+      --text-h: 4.5mm;  /* ارتفاع صورة الكود (4.5 مم = 36 نقطة) */
       --shift-up: 2mm; /* ارفع المحتوى لفوق: زوّدها لو عايز أكتر */
     }
     * { box-sizing: border-box; }
@@ -50,6 +52,7 @@
     #labels { display:none; }
     .label { width:var(--label-w); height:var(--label-h); overflow:hidden; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0.5mm 1mm calc(0.5mm + var(--shift-up) * 2); gap:0.3mm; text-align:center; break-inside:avoid; page-break-inside:avoid; }
     .qr { display:block; width:var(--qr-size); height:var(--qr-size); flex:0 0 var(--qr-size); object-fit:contain; }
+    .code-img { display:block; width:var(--text-w); height:var(--text-h); flex:0 0 var(--text-h); image-rendering:pixelated; image-rendering:crisp-edges; }
     .product-id { width:100%; max-height:5mm; overflow:hidden; direction:ltr; font-family:'Arial Black',Arial,sans-serif; font-size:var(--id-font); font-weight:900; letter-spacing:0.4mm; line-height:1.1; overflow-wrap:anywhere; }
 
     @page { size: 50mm 25mm; margin: 0; }
@@ -62,6 +65,7 @@
       .label:last-child { break-after:auto; page-break-after:auto; }
       .qr { width:var(--qr-size) !important; height:var(--qr-size) !important; }
       .product-id { font-size:var(--id-font) !important; }
+      .code-img { width:var(--text-w) !important; height:var(--text-h) !important; }
     }
   </style>
 </head>
@@ -367,6 +371,58 @@
     return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
   }
 
+  /**
+   * يرسم الـ Product Code كصورة أبيض/أسود بدقة الطابعة (203dpi) بالظبط،
+   * فيتطبع بنفس النقط من غير ما الـ driver يعيد رسم الخط ويقطّعه.
+   */
+  const PRINTER_DPI = 203;
+  const TEXT_W_MM = 46;
+  const TEXT_H_MM = 4.5;
+
+  function makeTextDataUrl(text) {
+    const dots = PRINTER_DPI / 25.4;
+    const w = Math.round(TEXT_W_MM * dots);   // 368
+    const h = Math.round(TEXT_H_MM * dots);   // 36
+
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.fillStyle = '#000';
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // أكبر خط يناسب العرض (يبدأ من 26 نقطة وينزل لو الكود طويل)
+    let size = 26;
+    while (size > 12) {
+      ctx.font = 'bold ' + size + 'px Arial, Helvetica, sans-serif';
+      if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+      if (ctx.measureText(text).width <= w - 6) break;
+      size--;
+    }
+
+    ctx.fillText(text, w / 2, h / 2 + 1);
+    ctx.strokeText(text, w / 2, h / 2 + 1);   // تغليظ بسيط
+
+    // تحويل لأبيض وأسود صافي (من غير رمادي) علشان الحواف تطلع حادة
+    const img = ctx.getImageData(0, 0, w, h);
+    const d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const v = d[i] < 150 ? 0 : 255;
+      d[i] = d[i + 1] = d[i + 2] = v;
+      d[i + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+
+    return canvas.toDataURL('image/png');
+  }
+
   /* ---------------- الطباعة ---------------- */
 
   function buildLabels(selected) {
@@ -398,9 +454,19 @@
       qr.alt = '';
       qr.src = dataUrl;
 
-      const id = document.createElement('div');
-      id.className = 'product-id';
-      id.textContent = code;
+      let id;
+
+      try {
+        id = document.createElement('img');
+        id.className = 'code-img';
+        id.alt = code;
+        id.src = makeTextDataUrl(code);
+      } catch (error) {
+        // لو الصورة فشلت نرجع للنص العادي
+        id = document.createElement('div');
+        id.className = 'product-id';
+        id.textContent = code;
+      }
 
       // محتويات الاستيكر: QR Code + Product Code فقط.
       label.appendChild(qr);
@@ -413,7 +479,7 @@
 
   // الصور data URI فبتتحمل فورًا تقريبًا، بس نستنى للتأكد قبل ما نفتح نافذة الطباعة.
   function waitForImages() {
-    const images = Array.from($('labels').querySelectorAll('img.qr'));
+    const images = Array.from($('labels').querySelectorAll('img'));
 
     return Promise.all(images.map(function(img) {
       if (img.complete && img.naturalWidth > 0) return Promise.resolve();
@@ -421,7 +487,7 @@
       return new Promise(function(resolve, reject) {
         img.addEventListener('load', resolve, { once: true });
         img.addEventListener('error', function() {
-          reject(new Error('تعذر تجهيز صورة QR للمنتج ' + (img.nextSibling ? img.nextSibling.textContent : '') + '.'));
+          reject(new Error('تعذر تجهيز صورة الاستيكر.'));
         }, { once: true });
       });
     }));

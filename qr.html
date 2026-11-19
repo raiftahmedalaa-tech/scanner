@@ -14,8 +14,8 @@
       --label-h: 24mm;
       --qr-size: 14mm;
       --id-font: 9pt;
-      --text-w: 46mm;   /* عرض صورة الكود (46 مم = 368 نقطة على 203dpi) */
-      --text-h: 4.5mm;  /* ارتفاع صورة الكود (4.5 مم = 36 نقطة) */
+      --text-w: 46mm;   /* عرض صورة النص (46 مم = 368 نقطة على 203dpi) */
+      --text-h: 4.5mm;  /* ارتفاع صورة النص (4.5 مم = 36 نقطة) */
       --shift-up: 2mm; /* ارفع المحتوى لفوق: زوّدها لو عايز أكتر */
     }
     * { box-sizing: border-box; }
@@ -42,10 +42,12 @@
     .list-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; flex-wrap:wrap; }
     .check-all { display:flex; align-items:center; gap:8px; font-weight:700; font-size:14px; cursor:pointer; }
     .count { color:var(--muted); font-size:13px; }
-    .codes { max-height:55vh; overflow-y:auto; border:1px solid var(--border); border-radius:12px; padding:10px; display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:8px; margin-bottom:14px; }
+    .codes { max-height:55vh; overflow-y:auto; border:1px solid var(--border); border-radius:12px; padding:10px; display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:8px; margin-bottom:14px; }
     .code-item { display:flex; align-items:center; gap:8px; padding:8px 10px; background:#f8fafc; border:1px solid var(--border); border-radius:10px; cursor:pointer; font-size:13px; }
     .code-item:hover { background:#eff6ff; }
-    .code-item span { direction:ltr; font-family:Arial,sans-serif; font-weight:700; overflow-wrap:anywhere; }
+    .code-text { display:flex; flex-direction:column; gap:2px; min-width:0; }
+    .code-text .c { direction:ltr; text-align:right; font-family:Arial,sans-serif; font-weight:700; overflow-wrap:anywhere; }
+    .code-text .n { font-size:12px; color:var(--muted); overflow-wrap:anywhere; line-height:1.5; }
     input[type=checkbox] { width:18px; height:18px; flex-shrink:0; cursor:pointer; }
 
     /* الاستيكرات: تظهر عند الطباعة فقط. المقاس من المتغيرات فوق (50 × 25 مم) */
@@ -76,7 +78,9 @@
   <section id="uploadCard" class="card">
     <h2>رفع ملف Excel</h2>
     <p class="hint">
-      الملف لازم يحتوي على شيت اسمه <b dir="ltr">QRCode</b> وفيه عمود اسمه <b dir="ltr">Product Code</b>.
+      الملف لازم يحتوي على شيت اسمه <b dir="ltr">QRCode</b> وفيه العمودين:
+      <b dir="ltr">ProductCode</b> و <b dir="ltr">ProductName</b>.
+      الـ ProductCode إجباري في كل صف، واسم المنتج لو فاضي بيتطبع الكود لوحده.
       أي أعمدة زيادة بتتجاهل، والصفوف الفاضية بتتجاهل.
     </p>
 
@@ -113,7 +117,8 @@
   'use strict';
 
   const SHEET_NAME = 'QRCode';
-  const HEADER = 'Product Code';
+  const HEADER_CODE = 'ProductCode';
+  const HEADER_NAME = 'ProductName';
   const PRODUCT_PAGE_URL = 'https://raiftahmedalaa-tech.github.io/scanner/product.html';
   const MAX_ERRORS_SHOWN = 60;
 
@@ -121,7 +126,8 @@
   const QR_ERROR_LEVEL = 'M';
   const QR_MARGIN_MODULES = 2;
 
-  let codes = [];
+  // كل عنصر: { code, name }
+  let items = [];
   let printing = false;
 
   const $ = function(id) { return document.getElementById(id); };
@@ -159,12 +165,18 @@
     $(id).textContent = '';
   }
 
+  // المقارنة بين أسماء الأعمدة بدون مسافات وبدون حساسية لحالة الأحرف (فـ "Product Code" و "ProductCode" نفس الشيء).
   function norm(value) {
     return String(value === null || value === undefined ? '' : value).trim().toLowerCase().replace(/\s+/g, '');
   }
 
   function cellText(value) {
     return value === null || value === undefined ? '' : String(value).trim();
+  }
+
+  // اسم المنتج: نشيل المسافات الزيادة ونضغط أي أسطر/مسافات متكررة في سطر واحد.
+  function cleanName(value) {
+    return cellText(value).replace(/\s+/g, ' ');
   }
 
   /* ---------------- القالب ---------------- */
@@ -175,9 +187,10 @@
       return;
     }
 
+    const headers = [HEADER_CODE, HEADER_NAME];
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet([[HEADER]]);
-    ws['!cols'] = [{ wch: 24 }];
+    const ws = XLSX.utils.aoa_to_sheet([headers]);
+    ws['!cols'] = [{ wch: 24 }, { wch: 36 }];
     XLSX.utils.book_append_sheet(wb, ws, SHEET_NAME);
 
     XLSX.writeFile(wb, 'qrcode-template.xlsx');
@@ -191,24 +204,29 @@
     });
 
     if (!actual) {
-      return { errors: ['الشيت "' + SHEET_NAME + '" غير موجود في الملف.'], codes: [] };
+      return { errors: ['الشيت "' + SHEET_NAME + '" غير موجود في الملف.'], items: [] };
     }
 
     const ws = wb.Sheets[actual];
     const ref = ws['!ref'];
 
     if (!ref) {
-      return { errors: ['الشيت "' + SHEET_NAME + '" فاضي.'], codes: [] };
+      return { errors: ['الشيت "' + SHEET_NAME + '" فاضي.'], items: [] };
     }
 
     const startRow = XLSX.utils.decode_range(ref).s.r;
     const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false, blankrows: true });
 
     const headerRow = aoa[0] || [];
-    const col = headerRow.findIndex(function(c) { return norm(c) === norm(HEADER); });
+    const codeCol = headerRow.findIndex(function(c) { return norm(c) === norm(HEADER_CODE); });
+    const nameCol = headerRow.findIndex(function(c) { return norm(c) === norm(HEADER_NAME); });
 
-    if (col === -1) {
-      return { errors: ['الشيت "' + SHEET_NAME + '" ناقصه العمود: ' + HEADER], codes: [] };
+    const missing = [];
+    if (codeCol === -1) missing.push(HEADER_CODE);
+    if (nameCol === -1) missing.push(HEADER_NAME);
+
+    if (missing.length) {
+      return { errors: ['الشيت "' + SHEET_NAME + '" ناقصه الأعمدة: ' + missing.join('، ')], items: [] };
     }
 
     const errors = [];
@@ -216,10 +234,17 @@
     const seen = {};
 
     for (let i = 1; i < aoa.length; i++) {
-      const code = cellText((aoa[i] || [])[col]);
+      const row = aoa[i] || [];
+      const code = cellText(row[codeCol]);
+      const name = cleanName(row[nameCol]);
       const rowNo = startRow + i + 1;
 
-      if (!code) continue;
+      if (!code && !name) continue;
+
+      if (!code) {
+        errors.push('الصف ' + rowNo + ': ProductCode فاضي (اسم المنتج "' + name + '").');
+        continue;
+      }
 
       const key = code.toLowerCase();
 
@@ -229,18 +254,18 @@
       }
 
       seen[key] = rowNo;
-      result.push(code);
+      result.push({ code: code, name: name });
     }
 
     if (errors.length === 0 && result.length === 0) {
       errors.push('الشيت "' + SHEET_NAME + '" مفيهوش أكواد منتجات.');
     }
 
-    return { errors: errors, codes: result };
+    return { errors: errors, items: result };
   }
 
   $('fileInput').addEventListener('change', function() {
-    codes = [];
+    items = [];
     hide('listCard');
     clearMessage('message');
     clearMessage('printMessage');
@@ -265,8 +290,13 @@
           return;
         }
 
-        codes = result.codes;
-        showMessage('message', 'الملف سليم. تم العثور على ' + codes.length + ' كود.', 'success');
+        items = result.items;
+
+        const noName = items.filter(function(it) { return !it.name; }).length;
+        let text = 'الملف سليم. تم العثور على ' + items.length + ' كود.';
+        if (noName > 0) text += ' (' + noName + ' منتج بدون اسم: هيتطبع الكود فقط)';
+
+        showMessage('message', text, 'success');
         renderList();
       })
       .catch(function() {
@@ -282,20 +312,32 @@
 
     const fragment = document.createDocumentFragment();
 
-    codes.forEach(function(code, i) {
-      const item = document.createElement('label');
-      item.className = 'code-item';
+    items.forEach(function(item, i) {
+      const row = document.createElement('label');
+      row.className = 'code-item';
 
       const box = document.createElement('input');
       box.type = 'checkbox';
       box.dataset.index = String(i);
 
-      const text = document.createElement('span');
-      text.textContent = code;
+      const text = document.createElement('div');
+      text.className = 'code-text';
 
-      item.appendChild(box);
-      item.appendChild(text);
-      fragment.appendChild(item);
+      const c = document.createElement('span');
+      c.className = 'c';
+      c.textContent = item.code;
+      text.appendChild(c);
+
+      if (item.name) {
+        const n = document.createElement('span');
+        n.className = 'n';
+        n.textContent = item.name;
+        text.appendChild(n);
+      }
+
+      row.appendChild(box);
+      row.appendChild(text);
+      fragment.appendChild(row);
     });
 
     list.appendChild(fragment);
@@ -310,10 +352,10 @@
     return Array.from($('codesList').querySelectorAll('input[type=checkbox]'));
   }
 
-  function selectedCodes() {
+  function selectedItems() {
     return checkboxes()
       .filter(function(box) { return box.checked; })
-      .map(function(box) { return codes[Number(box.dataset.index)]; });
+      .map(function(box) { return items[Number(box.dataset.index)]; });
   }
 
   function updateSelection() {
@@ -344,6 +386,7 @@
   /**
    * يولّد QR كصورة SVG (data URI) من غير أي طلب شبكة:
    * أكواد المنتجات ما بتخرجش من المتصفح، والـ SVG بيتطبع حاد على أي مقاس.
+   * (الـ QR بيحتوي رابط الكود فقط، اسم المنتج للعرض على الاستيكر بس.)
    */
   function makeQrDataUrl(text) {
     const qr = qrcode(0, QR_ERROR_LEVEL); // 0 = اختيار الإصدار تلقائيًا حسب طول النص
@@ -372,17 +415,32 @@
   }
 
   /**
-   * يرسم الـ Product Code كصورة أبيض/أسود بدقة الطابعة (203dpi) بالظبط،
+   * يرسم سطر النص على الاستيكر كصورة أبيض/أسود بدقة الطابعة (203dpi) بالظبط،
    * فيتطبع بنفس النقط من غير ما الـ driver يعيد رسم الخط ويقطّعه.
+   *
+   * الشكل:  اسم المنتج (كود المنتج)
+   * - اسم المنتج بخط أكبر، والكود بخط أصغر (النسبة ثابتة NAME_TO_CODE_RATIO).
+   * - الخطين بيصغروا مع بعض بنفس النسبة لحد ما السطر يتساع في العرض.
+   * - لو الاسم طويل جدًا حتى بأصغر خط، بيتقص بـ "…" (الكود بيفضل كامل دايمًا).
+   * - لو مفيش اسم: الكود لوحده بخطه الكبير الأصلي.
    */
   const PRINTER_DPI = 203;
   const TEXT_W_MM = 46;
   const TEXT_H_MM = 4.5;
 
-  function makeTextDataUrl(text) {
+  const FONT_FAMILY = 'Arial, Tahoma, Helvetica, sans-serif';
+  const NAME_START_PX = 28;      // أكبر خط للاسم (بالنقط)
+  const NAME_MIN_PX = 15;        // أصغر خط للاسم قبل ما نبدأ نقص الاسم
+  const NAME_TO_CODE_RATIO = 0.72; // خط الكود = خط الاسم × النسبة دي
+  const CODE_ONLY_START_PX = 26; // خط الكود لو مفيش اسم
+  const CODE_ONLY_MIN_PX = 12;
+  const SIDE_PAD_PX = 3;
+
+  function makeTextDataUrl(name, code) {
     const dots = PRINTER_DPI / 25.4;
     const w = Math.round(TEXT_W_MM * dots);   // 368
     const h = Math.round(TEXT_H_MM * dots);   // 36
+    const maxW = w - SIDE_PAD_PX * 2;
 
     const canvas = document.createElement('canvas');
     canvas.width = w;
@@ -393,21 +451,85 @@
     ctx.fillRect(0, 0, w, h);
 
     ctx.fillStyle = '#000';
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 1;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    if ('direction' in ctx) ctx.direction = 'ltr';
 
-    // أكبر خط يناسب العرض (يبدأ من 26 نقطة وينزل لو الكود طويل)
-    let size = 26;
-    while (size > 12) {
-      ctx.font = 'bold ' + size + 'px Arial, Helvetica, sans-serif';
-      if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
-      if (ctx.measureText(text).width <= w - 6) break;
-      size--;
+    function setFont(px, spacing) {
+      ctx.font = 'bold ' + px + 'px ' + FONT_FAMILY;
+      if ('letterSpacing' in ctx) ctx.letterSpacing = spacing + 'px';
     }
 
-    ctx.fillText(text, w / 2, h / 2 + 1);
+    function widthOf(text, px, spacing) {
+      setFont(px, spacing);
+      return ctx.measureText(text).width;
+    }
+
+    let namePx, codePx, nameText, codeText, gap;
+
+    if (!name) {
+      // الكود لوحده: نفس السلوك القديم (أكبر خط يناسب العرض).
+      nameText = '';
+      codeText = code;
+      gap = 0;
+      codePx = CODE_ONLY_START_PX;
+      namePx = codePx;
+
+      while (codePx > CODE_ONLY_MIN_PX && widthOf(codeText, codePx, 2) > maxW) codePx--;
+      namePx = codePx;
+    } else {
+      nameText = name;
+      codeText = '(' + code + ')';
+
+      namePx = NAME_START_PX;
+      codePx = Math.round(namePx * NAME_TO_CODE_RATIO);
+
+      // المسافة بين الاسم والكود بحجم مسافة بخط الكود.
+      const totalWidth = function() {
+        return widthOf(nameText, namePx, 1) + Math.round(codePx * 0.45) + widthOf(codeText, codePx, 1.5);
+      };
+
+      while (namePx > NAME_MIN_PX) {
+        codePx = Math.round(namePx * NAME_TO_CODE_RATIO);
+        if (totalWidth() <= maxW) break;
+        namePx--;
+      }
+
+      codePx = Math.round(namePx * NAME_TO_CODE_RATIO);
+
+      // لسه مش متساع بأصغر خط: نقص الاسم بـ "…".
+      if (totalWidth() > maxW) {
+        let chars = Array.from(nameText);
+
+        while (chars.length > 1) {
+          chars.pop();
+          nameText = chars.join('').trim() + '\u2026';
+          if (totalWidth() <= maxW) break;
+        }
+      }
+
+      gap = Math.round(codePx * 0.45);
+    }
+
+    // نحسب العرض الكلي ونوسّط السطر أفقيًا.
+    const nameSpacing = name ? 1 : 2;
+    const codeSpacing = name ? 1.5 : 2;
+    const nameW = nameText ? widthOf(nameText, namePx, nameSpacing) : 0;
+    const codeW = widthOf(codeText, codePx, codeSpacing);
+    const total = nameW + gap + codeW;
+    let x = Math.max(SIDE_PAD_PX, Math.round((w - total) / 2));
+
+    // خط أساس مشترك للاثنين: الاسم (الأكبر) متوسّط رأسيًا، والكود على نفس الخط.
+    const baseline = Math.round(h / 2 + namePx * 0.35);
+
+    if (nameText) {
+      setFont(namePx, nameSpacing);
+      ctx.fillText(nameText, x, baseline);
+      x += nameW + gap;
+    }
+
+    setFont(codePx, codeSpacing);
+    ctx.fillText(codeText, x, baseline);
 
     // تحويل لأبيض وأسود صافي (من غير رمادي) علشان الحواف تطلع حادة
     const img = ctx.getImageData(0, 0, w, h);
@@ -434,7 +556,9 @@
 
     const fragment = document.createDocumentFragment();
 
-    selected.forEach(function(code) {
+    selected.forEach(function(item) {
+      const code = item.code;
+      const name = item.name;
       const productUrl = PRODUCT_PAGE_URL + '?id=' + encodeURIComponent(code);
 
       let dataUrl;
@@ -458,16 +582,16 @@
       try {
         id = document.createElement('img');
         id.className = 'code-img';
-        id.alt = code;
-        id.src = makeTextDataUrl(code);
+        id.alt = name ? name + ' (' + code + ')' : code;
+        id.src = makeTextDataUrl(name, code);
       } catch (error) {
         // لو الصورة فشلت نرجع للنص العادي
         id = document.createElement('div');
         id.className = 'product-id';
-        id.textContent = code;
+        id.textContent = name ? name + ' (' + code + ')' : code;
       }
 
-      // محتويات الاستيكر: QR Code + Product Code فقط.
+      // محتويات الاستيكر: QR Code + (Product Name + Product Code).
       label.appendChild(qr);
       label.appendChild(id);
       fragment.appendChild(label);
@@ -495,7 +619,7 @@
   $('printButton').addEventListener('click', async function() {
     if (printing) return;
 
-    const selected = selectedCodes();
+    const selected = selectedItems();
     if (selected.length === 0) return;
 
     printing = true;
